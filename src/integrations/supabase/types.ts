@@ -14,7 +14,297 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customer_files: {
+        Row: {
+          created_at: string
+          customer_id: string
+          description: string | null
+          file_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          file_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          file_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_files_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_files_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          photo_url: string | null
+          tier: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          tier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          tier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      files: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          file_type: string
+          folder_id: string | null
+          id: string
+          name: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          file_type: string
+          folder_id?: string | null
+          id?: string
+          name: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          file_type?: string
+          folder_id?: string | null
+          id?: string
+          name?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          carat: string | null
+          category: string
+          cost_price: number | null
+          created_at: string
+          description: string | null
+          gemstone: string | null
+          id: string
+          image_url: string | null
+          metal: string | null
+          name: string
+          price: number
+          sku: string
+          stock: number
+          updated_at: string
+          weight: string | null
+        }
+        Insert: {
+          carat?: string | null
+          category: string
+          cost_price?: number | null
+          created_at?: string
+          description?: string | null
+          gemstone?: string | null
+          id?: string
+          image_url?: string | null
+          metal?: string | null
+          name: string
+          price?: number
+          sku: string
+          stock?: number
+          updated_at?: string
+          weight?: string | null
+        }
+        Update: {
+          carat?: string | null
+          category?: string
+          cost_price?: number | null
+          created_at?: string
+          description?: string | null
+          gemstone?: string | null
+          id?: string
+          image_url?: string | null
+          metal?: string | null
+          name?: string
+          price?: number
+          sku?: string
+          stock?: number
+          updated_at?: string
+          weight?: string | null
+        }
+        Relationships: []
+      }
+      transaction_items: {
+        Row: {
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          subtotal: number
+          transaction_id: string
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          subtotal: number
+          transaction_id: string
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          subtotal?: number
+          transaction_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          discount: number | null
+          id: string
+          notes: string | null
+          tax: number | null
+          total_amount: number
+          transaction_type: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          discount?: number | null
+          id?: string
+          notes?: string | null
+          tax?: number | null
+          total_amount?: number
+          transaction_type: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          discount?: number | null
+          id?: string
+          notes?: string | null
+          tax?: number | null
+          total_amount?: number
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
