@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, FileText, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Trash2, Plus, Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +119,33 @@ const CustomerDetail = () => {
       if (error) throw error;
       toast.success("File deleted");
       fetchCustomerData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handlePreviewFile = async (storagePath: string) => {
+    try {
+      const { data } = supabase.storage.from("customer-files").getPublicUrl(storagePath);
+      window.open(data.publicUrl, "_blank");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleDownloadFile = async (storagePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage.from("customer-files").download(storagePath);
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -276,13 +303,29 @@ const CustomerDetail = () => {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteFile(customerFile.id, customerFile.files.storage_path)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePreviewFile(customerFile.files.storage_path)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadFile(customerFile.files.storage_path, customerFile.files.name)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFile(customerFile.id, customerFile.files.storage_path)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}

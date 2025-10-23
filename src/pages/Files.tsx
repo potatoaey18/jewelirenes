@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FolderPlus, FilePlus, Upload, Trash2, Folder, File } from "lucide-react";
+import { FolderPlus, FilePlus, Upload, Trash2, Folder, File, Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,20 +24,24 @@ const Files = () => {
 
   const fetchData = async () => {
     try {
-      const { data: foldersData, error: foldersError } = await supabase
-        .from("folders")
-        .select("*")
-        .eq("parent_id", currentFolder || null)
-        .order("name");
+      let foldersQuery = supabase.from("folders").select("*").order("name");
+      if (currentFolder) {
+        foldersQuery = foldersQuery.eq("parent_id", currentFolder);
+      } else {
+        foldersQuery = foldersQuery.is("parent_id", null);
+      }
+      const { data: foldersData, error: foldersError } = await foldersQuery;
 
       if (foldersError) throw foldersError;
       setFolders(foldersData || []);
 
-      const { data: filesData, error: filesError } = await supabase
-        .from("files")
-        .select("*")
-        .eq("folder_id", currentFolder || null)
-        .order("name");
+      let filesQuery = supabase.from("files").select("*").order("name");
+      if (currentFolder) {
+        filesQuery = filesQuery.eq("folder_id", currentFolder);
+      } else {
+        filesQuery = filesQuery.is("folder_id", null);
+      }
+      const { data: filesData, error: filesError } = await filesQuery;
 
       if (filesError) throw filesError;
       setFiles(filesData || []);
@@ -61,11 +65,16 @@ const Files = () => {
         ? `${getCurrentPath()}/${newFolderName}`
         : `/${newFolderName}`;
 
-      const { error } = await supabase.from("folders").insert({
+      const folderData: any = {
         name: newFolderName,
-        parent_id: currentFolder,
         path,
-      });
+      };
+      
+      if (currentFolder) {
+        folderData.parent_id = currentFolder;
+      }
+
+      const { error } = await supabase.from("folders").insert(folderData);
 
       if (error) throw error;
 
@@ -95,13 +104,18 @@ const Files = () => {
 
       if (uploadError) throw uploadError;
 
-      const { error: dbError } = await supabase.from("files").insert({
+      const fileData: any = {
         name: file.name,
         file_type: file.type,
         file_size: file.size,
-        folder_id: currentFolder,
         storage_path: filePath,
-      });
+      };
+      
+      if (currentFolder) {
+        fileData.folder_id = currentFolder;
+      }
+
+      const { error: dbError } = await supabase.from("files").insert(fileData);
 
       if (dbError) throw dbError;
 
@@ -130,6 +144,33 @@ const Files = () => {
       if (error) throw error;
       toast.success("File deleted");
       fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handlePreviewFile = async (storagePath: string) => {
+    try {
+      const { data } = supabase.storage.from("file-system").getPublicUrl(storagePath);
+      window.open(data.publicUrl, "_blank");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleDownloadFile = async (storagePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage.from("file-system").download(storagePath);
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -224,14 +265,32 @@ const Files = () => {
                     {format(new Date(file.created_at), "PP")}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => handleDeleteFile(file.id, file.storage_path)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handlePreviewFile(file.storage_path)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleDownloadFile(file.storage_path, file.name)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleDeleteFile(file.id, file.storage_path)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
