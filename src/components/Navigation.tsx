@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Users, Crown } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Navigation = () => {
@@ -8,6 +8,7 @@ const Navigation = () => {
     { to: "/pos", icon: ShoppingCart, label: "POS" },
     { to: "/inventory", icon: Package, label: "Inventory" },
     { to: "/customers", icon: Users, label: "Customers" },
+    { to: "/files", icon: FolderOpen, label: "Files" },
   ];
 
   return (

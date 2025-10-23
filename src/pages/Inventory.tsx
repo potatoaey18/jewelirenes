@@ -1,65 +1,82 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Package, Plus, Edit, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { ProductDialog } from "@/components/inventory/ProductDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Navigation from "@/components/Navigation";
 
 const Inventory = () => {
-  const [products] = useState([
-    {
-      id: "1",
-      name: "Diamond Solitaire Ring",
-      sku: "DSR-001",
-      category: "Rings",
-      metal: "18K White Gold",
-      gemstone: "Diamond",
-      carat: "1.5",
-      weight: "3.2g",
-      price: 4200,
-      stock: 12,
-      image: "ring",
-    },
-    {
-      id: "2",
-      name: "Gold Chain Necklace",
-      sku: "GCN-002",
-      category: "Necklaces",
-      metal: "24K Yellow Gold",
-      gemstone: "None",
-      carat: "-",
-      weight: "8.5g",
-      price: 2850,
-      stock: 8,
-      image: "necklace",
-    },
-    {
-      id: "3",
-      name: "Pearl Drop Earrings",
-      sku: "PDE-003",
-      category: "Earrings",
-      metal: "Sterling Silver",
-      gemstone: "Pearl",
-      carat: "-",
-      weight: "2.1g",
-      price: 890,
-      stock: 25,
-      image: "earrings",
-    },
-    {
-      id: "4",
-      name: "Ruby Tennis Bracelet",
-      sku: "RTB-004",
-      category: "Bracelets",
-      metal: "18K Rose Gold",
-      gemstone: "Ruby",
-      carat: "3.0",
-      weight: "12.5g",
-      price: 5600,
-      stock: 5,
-      image: "bracelet",
-    },
-  ]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleEdit = (product: any) => {
+    setSelectedProduct(product);
+    setDialogOpen(true);
+  };
+
+  const handleAdd = () => {
+    setSelectedProduct(null);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteClick = (productId: string) => {
+    setProductToDelete(productId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productToDelete);
+
+      if (error) throw error;
+      toast.success("Product deleted");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
+  };
 
   const getStockBadge = (stock: number) => {
     if (stock < 10) return <Badge variant="destructive">Low Stock</Badge>;
@@ -77,7 +94,10 @@ const Inventory = () => {
             <h2 className="text-4xl font-bold mb-2">Inventory Management</h2>
             <p className="text-muted-foreground">Manage your jewelry collection</p>
           </div>
-          <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <Button
+            onClick={handleAdd}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Button>
@@ -90,7 +110,11 @@ const Inventory = () => {
               className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 overflow-hidden"
             >
               <div className="h-48 bg-gradient-to-br from-accent/20 to-accent/5 relative flex items-center justify-center">
-                <Package className="h-16 w-16 text-accent/40" />
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Package className="h-16 w-16 text-accent/40" />
+                )}
                 <div className="absolute top-2 right-2">{getStockBadge(product.stock)}</div>
               </div>
               <CardContent className="p-4 space-y-3">
@@ -134,11 +158,21 @@ const Inventory = () => {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleEdit(product)}
+                  >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteClick(product.id)}
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -147,6 +181,30 @@ const Inventory = () => {
           ))}
         </div>
       </main>
+
+      <ProductDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={selectedProduct}
+        onSuccess={fetchProducts}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

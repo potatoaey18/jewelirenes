@@ -1,5 +1,19 @@
-import { useState } from "react";
-import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag } from "lucide-react";
+import { useState, useEffect } from "react";
+import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { CustomerDialog } from "@/components/customers/CustomerDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,54 +21,71 @@ import { Badge } from "@/components/ui/badge";
 import Navigation from "@/components/Navigation";
 
 const Customers = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
 
-  const customers = [
-    {
-      id: "1",
-      name: "Sarah Johnson",
-      email: "sarah.j@email.com",
-      phone: "+1 (555) 123-4567",
-      location: "New York, NY",
-      totalSpent: 12450,
-      purchases: 8,
-      lastVisit: "2 days ago",
-      tier: "VIP",
-    },
-    {
-      id: "2",
-      name: "Michael Chen",
-      email: "m.chen@email.com",
-      phone: "+1 (555) 234-5678",
-      location: "Los Angeles, CA",
-      totalSpent: 8920,
-      purchases: 5,
-      lastVisit: "1 week ago",
-      tier: "Gold",
-    },
-    {
-      id: "3",
-      name: "Emma Davis",
-      email: "emma.d@email.com",
-      phone: "+1 (555) 345-6789",
-      location: "Chicago, IL",
-      totalSpent: 5240,
-      purchases: 3,
-      lastVisit: "3 days ago",
-      tier: "Silver",
-    },
-    {
-      id: "4",
-      name: "James Wilson",
-      email: "j.wilson@email.com",
-      phone: "+1 (555) 456-7890",
-      location: "Houston, TX",
-      totalSpent: 18750,
-      purchases: 12,
-      lastVisit: "Yesterday",
-      tier: "VIP",
-    },
-  ];
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("customers")
+        .select(`
+          *,
+          transactions(total_amount)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleEdit = (customer: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCustomer(customer);
+    setDialogOpen(true);
+  };
+
+  const handleAdd = () => {
+    setSelectedCustomer(null);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteClick = (customerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCustomerToDelete(customerId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!customerToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", customerToDelete);
+
+      if (error) throw error;
+      toast.success("Customer deleted");
+      fetchCustomers();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+    }
+  };
 
   const getTierBadge = (tier: string) => {
     const variants: Record<string, { bg: string; text: string }> = {
@@ -70,8 +101,17 @@ const Customers = () => {
 
   const filteredCustomers = customers.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
+    c.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const getCustomerStats = (customer: any) => {
+    const totalSpent = customer.transactions?.reduce(
+      (sum: number, t: any) => sum + parseFloat(t.total_amount || 0),
+      0
+    ) || 0;
+    const purchases = customer.transactions?.length || 0;
+    return { totalSpent, purchases };
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
@@ -83,7 +123,10 @@ const Customers = () => {
             <h2 className="text-4xl font-bold mb-2">Customer Directory</h2>
             <p className="text-muted-foreground">Manage your client relationships</p>
           </div>
-          <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <Button
+            onClick={handleAdd}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground"
+          >
             <UserPlus className="mr-2 h-4 w-4" />
             Add Customer
           </Button>
@@ -102,55 +145,110 @@ const Customers = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCustomers.map((customer) => (
-            <Card
-              key={customer.id}
-              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 cursor-pointer overflow-hidden"
-            >
-              <div className="h-24 bg-gradient-to-br from-accent/20 to-accent/5 group-hover:from-accent/30 group-hover:to-accent/10 transition-all relative">
-                <div className="absolute top-3 right-3">{getTierBadge(customer.tier)}</div>
-              </div>
+          {filteredCustomers.map((customer) => {
+            const { totalSpent, purchases } = getCustomerStats(customer);
+            return (
+              <Card
+                key={customer.id}
+                className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 cursor-pointer overflow-hidden"
+                onClick={() => navigate(`/customers/${customer.id}`)}
+              >
+                <div className="h-24 bg-gradient-to-br from-accent/20 to-accent/5 group-hover:from-accent/30 group-hover:to-accent/10 transition-all relative flex items-center justify-center">
+                  {customer.photo_url ? (
+                    <img src={customer.photo_url} alt={customer.name} className="w-16 h-16 rounded-full object-cover" />
+                  ) : (
+                    <User className="h-16 w-16 text-accent/40" />
+                  )}
+                  <div className="absolute top-3 right-3">{getTierBadge(customer.tier)}</div>
+                </div>
               <CardContent className="p-6 space-y-4">
                 <div>
                   <h3 className="text-xl font-bold mb-2">{customer.name}</h3>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5" />
-                      <span className="truncate">{customer.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>{customer.phone}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>{customer.location}</span>
-                    </div>
+                    {customer.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5" />
+                        <span className="truncate">{customer.email}</span>
+                      </div>
+                    )}
+                    {customer.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5" />
+                        <span>{customer.phone}</span>
+                      </div>
+                    )}
+                    {customer.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span>{customer.location}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Total Spent</p>
-                    <p className="text-lg font-bold text-accent">${customer.totalSpent.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-accent">${totalSpent.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Purchases</p>
                     <div className="flex items-center gap-1">
                       <ShoppingBag className="h-4 w-4 text-accent" />
-                      <p className="text-lg font-bold">{customer.purchases}</p>
+                      <p className="text-lg font-bold">{purchases}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-xs text-muted-foreground pt-2 border-t border-border">
-                  Last visit: {customer.lastVisit}
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => handleEdit(customer, e)}
+                  >
+                    <Edit2 className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={(e) => handleDeleteClick(customer.id, e)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </main>
+
+      <CustomerDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        customer={selectedCustomer}
+        onSuccess={fetchCustomers}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this customer? This will also delete all their transactions and files.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
