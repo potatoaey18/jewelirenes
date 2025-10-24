@@ -250,11 +250,11 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                     <div className="flex-1">
                       <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {item.quantity} × ${item.price}
+                        {item.quantity} × ₱{item.price}
                       </p>
                     </div>
                     <p className="font-semibold text-accent">
-                      ${(item.price * item.quantity).toLocaleString()}
+                      ₱{(item.price * item.quantity).toLocaleString()}
                     </p>
                   </div>
                 ))}
@@ -265,15 +265,15 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
             <div className="border-t border-border pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>${total.toLocaleString()}</span>
+                <span>₱{total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Tax (10%)</span>
-                <span>${(total * 0.1).toLocaleString()}</span>
+                <span>₱{(total * 0.1).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-accent border-t border-border pt-2">
                 <span>Total</span>
-                <span>${(total * 1.1).toLocaleString()}</span>
+                <span>₱{(total * 1.1).toLocaleString()}</span>
               </div>
             </div>
           </div>

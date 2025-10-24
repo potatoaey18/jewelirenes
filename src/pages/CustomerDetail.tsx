@@ -220,7 +220,7 @@ const CustomerDetail = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Spent</p>
-                    <p className="text-3xl font-bold text-accent">${totalSpent.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-accent">₱{totalSpent.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Purchases</p>
@@ -246,7 +246,7 @@ const CustomerDetail = () => {
                             <p className="font-medium">{format(new Date(transaction.created_at), "PPP")}</p>
                             <Badge className="mt-1">{transaction.transaction_type}</Badge>
                           </div>
-                          <p className="text-xl font-bold text-accent">${transaction.total_amount}</p>
+                          <p className="text-xl font-bold text-accent">₱{transaction.total_amount}</p>
                         </div>
                         {transaction.transaction_items && transaction.transaction_items.length > 0 && (
                           <div className="mt-2 space-y-1 text-sm">

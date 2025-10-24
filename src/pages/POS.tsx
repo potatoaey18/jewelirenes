@@ -101,7 +101,7 @@ const POS = () => {
       <Navigation />
 
       <main className="container mx-auto px-6 py-8">
-        <h2 className="text-4xl font-bold mb-8">Point of Sale</h2>
+        <h2 className="text-4xl font-bold mb-8">Point of Sale - Jewelirene's Jewelry</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -134,7 +134,7 @@ const POS = () => {
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
                     <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                    <p className="text-2xl font-bold text-accent">${product.price.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-accent">₱{product.price.toLocaleString()}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -159,7 +159,7 @@ const POS = () => {
                         >
                           <div className="flex-1">
                             <p className="font-medium">{item.name}</p>
-                            <p className="text-sm text-accent">${item.price}</p>
+                            <p className="text-sm text-accent">₱{item.price}</p>
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
@@ -195,15 +195,15 @@ const POS = () => {
                     <div className="border-t border-border pt-4 space-y-2">
                       <div className="flex justify-between text-lg">
                         <span className="font-medium">Subtotal</span>
-                        <span>${total.toLocaleString()}</span>
+                        <span>₱{total.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Tax (10%)</span>
-                        <span>${(total * 0.1).toLocaleString()}</span>
+                        <span>₱{(total * 0.1).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-2xl font-bold text-accent border-t border-border pt-2">
                         <span>Total</span>
-                        <span>${(total * 1.1).toLocaleString()}</span>
+                        <span>₱{(total * 1.1).toLocaleString()}</span>
                       </div>
                     </div>
 

@@ -149,7 +149,7 @@ const Inventory = () => {
                 <div className="flex items-center justify-between pt-2 border-t border-border">
                   <div>
                     <p className="text-xs text-muted-foreground">Price</p>
-                    <p className="text-xl font-bold text-accent">${product.price.toLocaleString()}</p>
+                    <p className="text-xl font-bold text-accent">₱{product.price.toLocaleString()}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Stock</p>

@@ -91,7 +91,7 @@ const Dashboard = () => {
   const statsData = [
     {
       title: "Today's Sales",
-      value: `$${stats.todaySales.toLocaleString()}`,
+      value: `₱${stats.todaySales.toLocaleString()}`,
       icon: DollarSign,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -112,7 +112,7 @@ const Dashboard = () => {
     },
     {
       title: "Revenue",
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: `₱${stats.totalRevenue.toLocaleString()}`,
       icon: TrendingUp,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -125,8 +125,8 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <h2 className="text-4xl font-bold mb-2">Welcome Back</h2>
-          <p className="text-muted-foreground">Here's what's happening with your jewelry business today.</p>
+          <h2 className="text-4xl font-bold mb-2">Welcome to Jewelirene's Jewelry</h2>
+          <p className="text-muted-foreground">Here's what's happening with your business today.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -150,65 +150,40 @@ const Dashboard = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle>Recent Sales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentSales.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No recent sales</p>
-                ) : (
-                  recentSales.map((sale) => {
-                    const productName = sale.transaction_items?.[0]?.product_name || "Multiple items";
-                    const customerName = sale.customers?.name || "Unknown";
-                    const timeAgo = new Date(sale.created_at).toLocaleTimeString();
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>Recent Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentSales.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No recent sales</p>
+              ) : (
+                recentSales.map((sale) => {
+                  const productName = sale.transaction_items?.[0]?.product_name || "Multiple items";
+                  const customerName = sale.customers?.name || "Unknown";
+                  const timeAgo = new Date(sale.created_at).toLocaleTimeString();
 
-                    return (
-                      <div
-                        key={sale.id}
-                        className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-                      >
-                        <div>
-                          <p className="font-medium">{productName}</p>
-                          <p className="text-sm text-muted-foreground">{customerName}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-accent">${Number(sale.total_amount).toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">{timeAgo}</p>
-                        </div>
+                  return (
+                    <div
+                      key={sale.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium">{productName}</p>
+                        <p className="text-sm text-muted-foreground">{customerName}</p>
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle>Top Products</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { name: "18K Gold Ring", sales: 45, revenue: "$18,900" },
-                  { name: "Diamond Studs", sales: 38, revenue: "$15,200" },
-                  { name: "Silver Chain", sales: 52, revenue: "$10,400" },
-                ].map((product, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors border border-accent/20">
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">{product.sales} sales</p>
+                      <div className="text-right">
+                        <p className="font-bold text-accent">₱{Number(sale.total_amount).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                      </div>
                     </div>
-                    <div className="font-bold text-accent">{product.revenue}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
