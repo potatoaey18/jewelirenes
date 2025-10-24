@@ -1,35 +1,120 @@
+import { useState, useEffect } from "react";
 import { TrendingUp, ShoppingBag, Users, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
-  const stats = [
+  const [stats, setStats] = useState({
+    todaySales: 0,
+    todayOrders: 0,
+    totalCustomers: 0,
+    totalRevenue: 0,
+  });
+  const [recentSales, setRecentSales] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchStats();
+    fetchRecentSales();
+
+    // Set up realtime subscription for transactions
+    const channel = supabase
+      .channel("dashboard-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+        },
+        () => {
+          fetchStats();
+          fetchRecentSales();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchStats = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Today's sales and orders
+    const { data: todayTransactions } = await supabase
+      .from("transactions")
+      .select("total_amount")
+      .gte("created_at", today.toISOString());
+
+    const todaySales = todayTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+    const todayOrders = todayTransactions?.length || 0;
+
+    // Total customers
+    const { count: totalCustomers } = await supabase
+      .from("customers")
+      .select("*", { count: "exact", head: true });
+
+    // Total revenue
+    const { data: allTransactions } = await supabase
+      .from("transactions")
+      .select("total_amount");
+
+    const totalRevenue = allTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+
+    setStats({
+      todaySales,
+      todayOrders,
+      totalCustomers: totalCustomers || 0,
+      totalRevenue,
+    });
+  };
+
+  const fetchRecentSales = async () => {
+    const { data } = await supabase
+      .from("transactions")
+      .select(`
+        id,
+        total_amount,
+        created_at,
+        customers (name),
+        transaction_items (product_name)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    setRecentSales(data || []);
+  };
+
+  const statsData = [
     {
       title: "Today's Sales",
-      value: "$12,450",
+      value: `$${stats.todaySales.toLocaleString()}`,
       icon: DollarSign,
-      trend: "+12.5%",
+      trend: "",
       bgGradient: "from-accent/20 to-accent/5",
     },
     {
       title: "Orders",
-      value: "24",
+      value: stats.todayOrders.toString(),
       icon: ShoppingBag,
-      trend: "+8%",
+      trend: "",
       bgGradient: "from-primary/10 to-primary/5",
     },
     {
       title: "Customers",
-      value: "186",
+      value: stats.totalCustomers.toString(),
       icon: Users,
-      trend: "+23",
+      trend: "",
       bgGradient: "from-secondary to-secondary/50",
     },
     {
       title: "Revenue",
-      value: "$48,290",
+      value: `$${stats.totalRevenue.toLocaleString()}`,
       icon: TrendingUp,
-      trend: "+18.2%",
+      trend: "",
       bgGradient: "from-accent/20 to-accent/5",
     },
   ];
@@ -45,7 +130,7 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat) => (
+          {statsData.map((stat) => (
             <Card
               key={stat.title}
               className="relative overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
@@ -59,7 +144,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="relative">
                 <div className="text-3xl font-bold">{stat.value}</div>
-                <p className="text-xs text-accent mt-1">{stat.trend} from last week</p>
+                {stat.trend && <p className="text-xs text-accent mt-1">{stat.trend}</p>}
               </CardContent>
             </Card>
           ))}
@@ -72,22 +157,31 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { name: "Diamond Necklace", customer: "Sarah Johnson", amount: "$4,200", time: "2 mins ago" },
-                  { name: "Gold Bracelet", customer: "Michael Chen", amount: "$1,850", time: "15 mins ago" },
-                  { name: "Pearl Earrings", customer: "Emma Davis", amount: "$890", time: "1 hour ago" },
-                ].map((sale, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                    <div>
-                      <p className="font-medium">{sale.name}</p>
-                      <p className="text-sm text-muted-foreground">{sale.customer}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-accent">{sale.amount}</p>
-                      <p className="text-xs text-muted-foreground">{sale.time}</p>
-                    </div>
-                  </div>
-                ))}
+                {recentSales.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No recent sales</p>
+                ) : (
+                  recentSales.map((sale) => {
+                    const productName = sale.transaction_items?.[0]?.product_name || "Multiple items";
+                    const customerName = sale.customers?.name || "Unknown";
+                    const timeAgo = new Date(sale.created_at).toLocaleTimeString();
+
+                    return (
+                      <div
+                        key={sale.id}
+                        className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium">{productName}</p>
+                          <p className="text-sm text-muted-foreground">{customerName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-accent">${Number(sale.total_amount).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>

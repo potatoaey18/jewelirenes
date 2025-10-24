@@ -9,6 +9,16 @@ import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Files = () => {
   const [folders, setFolders] = useState<any[]>([]);
@@ -17,6 +27,8 @@ const Files = () => {
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ type: "folder" | "file"; id: string; storagePath?: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -126,26 +138,33 @@ const Files = () => {
     }
   };
 
-  const handleDeleteFolder = async (folderId: string) => {
-    try {
-      const { error } = await supabase.from("folders").delete().eq("id", folderId);
-      if (error) throw error;
-      toast.success("Folder deleted");
-      fetchData();
-    } catch (error: any) {
-      toast.error(error.message);
-    }
+  const handleDeleteClick = (type: "folder" | "file", id: string, storagePath?: string) => {
+    setItemToDelete({ type, id, storagePath });
+    setDeleteDialogOpen(true);
   };
 
-  const handleDeleteFile = async (fileId: string, storagePath: string) => {
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+
     try {
-      await supabase.storage.from("file-system").remove([storagePath]);
-      const { error } = await supabase.from("files").delete().eq("id", fileId);
-      if (error) throw error;
-      toast.success("File deleted");
+      if (itemToDelete.type === "folder") {
+        const { error } = await supabase.from("folders").delete().eq("id", itemToDelete.id);
+        if (error) throw error;
+        toast.success("Folder deleted");
+      } else {
+        if (itemToDelete.storagePath) {
+          await supabase.storage.from("file-system").remove([itemToDelete.storagePath]);
+        }
+        const { error } = await supabase.from("files").delete().eq("id", itemToDelete.id);
+        if (error) throw error;
+        toast.success("File deleted");
+      }
       fetchData();
     } catch (error: any) {
       toast.error(error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -243,7 +262,7 @@ const Files = () => {
                   className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteFolder(folder.id);
+                    handleDeleteClick("folder", folder.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
@@ -286,7 +305,7 @@ const Files = () => {
                     variant="ghost"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleDeleteFile(file.id, file.storage_path)}
+                    onClick={() => handleDeleteClick("file", file.id, file.storage_path)}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -331,6 +350,23 @@ const Files = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the {itemToDelete?.type === "folder" ? "folder and all its contents" : "file"}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

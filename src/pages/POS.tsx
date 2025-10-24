@@ -1,31 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Minus, Trash2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Navigation from "@/components/Navigation";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { CheckoutDialog } from "@/components/pos/CheckoutDialog";
 
 interface CartItem {
   id: string;
   name: string;
   price: number;
   quantity: number;
+  image_url?: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  image_url?: string;
 }
 
 const POS = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  const sampleProducts = [
-    { id: "1", name: "Diamond Ring", price: 4200, category: "Rings" },
-    { id: "2", name: "Gold Necklace", price: 2850, category: "Necklaces" },
-    { id: "3", name: "Pearl Earrings", price: 890, category: "Earrings" },
-    { id: "4", name: "Silver Bracelet", price: 650, category: "Bracelets" },
-    { id: "5", name: "Ruby Pendant", price: 3200, category: "Pendants" },
-  ];
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-  const addToCart = (product: typeof sampleProducts[0]) => {
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, price, category, image_url")
+      .gt("stock", 0);
+
+    if (error) {
+      toast.error("Failed to load products");
+      console.error(error);
+    } else {
+      setProducts(data || []);
+    }
+  };
+
+  const addToCart = (product: Product) => {
     const existing = cart.find((item) => item.id === product.id);
     if (existing) {
       setCart(
@@ -61,11 +84,15 @@ const POS = () => {
       toast.error("Cart is empty");
       return;
     }
-    toast.success("Sale completed successfully!");
-    setCart([]);
+    setCheckoutOpen(true);
   };
 
-  const filteredProducts = sampleProducts.filter((p) =>
+  const handleCheckoutSuccess = () => {
+    setCart([]);
+    fetchProducts(); // Refresh products to update stock
+  };
+
+  const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -95,7 +122,15 @@ const POS = () => {
                   className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 overflow-hidden group"
                   onClick={() => addToCart(product)}
                 >
-                  <div className="h-32 bg-gradient-to-br from-accent/20 to-accent/5 group-hover:from-accent/30 group-hover:to-accent/10 transition-all" />
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="h-32 w-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="h-32 bg-gradient-to-br from-accent/20 to-accent/5 group-hover:from-accent/30 group-hover:to-accent/10 transition-all" />
+                  )}
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
                     <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
@@ -187,6 +222,14 @@ const POS = () => {
           </div>
         </div>
       </main>
+
+      <CheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        cart={cart}
+        total={total}
+        onSuccess={handleCheckoutSuccess}
+      />
     </div>
   );
 };

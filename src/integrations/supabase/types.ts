@@ -270,7 +270,9 @@ export type Database = {
           customer_id: string
           discount: number | null
           id: string
+          invoice_image_url: string | null
           notes: string | null
+          payment_type: string | null
           tax: number | null
           total_amount: number
           transaction_type: string
@@ -280,7 +282,9 @@ export type Database = {
           customer_id: string
           discount?: number | null
           id?: string
+          invoice_image_url?: string | null
           notes?: string | null
+          payment_type?: string | null
           tax?: number | null
           total_amount?: number
           transaction_type: string
@@ -290,7 +294,9 @@ export type Database = {
           customer_id?: string
           discount?: number | null
           id?: string
+          invoice_image_url?: string | null
           notes?: string | null
+          payment_type?: string | null
           tax?: number | null
           total_amount?: number
           transaction_type?: string
