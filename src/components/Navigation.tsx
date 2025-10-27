@@ -47,7 +47,7 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
             <Crown className="h-6 w-6 text-accent" />
-            <h1 className="text-xl font-bold">Jewelirene's</h1>
+            <h1 className="text-xl font-bold">Store Manager</h1>
           </div>
           
           <div className="flex items-center gap-2">
