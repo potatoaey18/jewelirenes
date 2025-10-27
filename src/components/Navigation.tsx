@@ -43,36 +43,36 @@ const Navigation = () => {
 
   return (
     <nav className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-14 sm:h-16">
           <div className="flex items-center gap-2">
-            <Crown className="h-6 w-6 text-accent" />
-            <h1 className="text-xl font-bold">Store Manager</h1>
+            <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
+            <h1 className="text-lg sm:text-xl font-bold">Store Manager</h1>
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex gap-0.5 sm:gap-1">
               {links.map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
                   to={to}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
+                      "flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg transition-all duration-200",
                       "hover:bg-secondary",
                       isActive && "bg-accent text-accent-foreground font-medium"
                     )
                   }
                 >
                   <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{label}</span>
+                  <span className="hidden md:inline text-sm">{label}</span>
                 </NavLink>
               ))}
             </div>
             {user && (
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-1 sm:ml-2">
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">Logout</span>
+                <span className="hidden md:inline ml-2">Logout</span>
               </Button>
             )}
           </div>

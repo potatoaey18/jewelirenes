@@ -123,13 +123,13 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
       
-      <main className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold mb-2">Dashboard</h2>
-          <p className="text-muted-foreground">Here's what's happening with your business today.</p>
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Dashboard</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your business today.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {statsData.map((stat) => (
             <Card
               key={stat.title}
@@ -137,13 +137,13 @@ const Dashboard = () => {
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-50`} />
               <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                   {stat.title}
                 </CardTitle>
                 <stat.icon className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent className="relative">
-                <div className="text-3xl font-bold">{stat.value}</div>
+                <div className="text-2xl sm:text-3xl font-bold">{stat.value}</div>
                 {stat.trend && <p className="text-xs text-accent mt-1">{stat.trend}</p>}
               </CardContent>
             </Card>
@@ -167,14 +167,14 @@ const Dashboard = () => {
                   return (
                     <div
                       key={sale.id}
-                      className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors gap-3 sm:gap-0"
                     >
-                      <div>
-                        <p className="font-medium">{productName}</p>
-                        <p className="text-sm text-muted-foreground">{customerName}</p>
+                      <div className="w-full sm:w-auto">
+                        <p className="font-medium text-sm sm:text-base">{productName}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{customerName}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-accent">₱{Number(sale.total_amount).toLocaleString()}</p>
+                      <div className="text-left sm:text-right w-full sm:w-auto">
+                        <p className="font-bold text-accent text-sm sm:text-base">₱{Number(sale.total_amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">{timeAgo}</p>
                       </div>
                     </div>

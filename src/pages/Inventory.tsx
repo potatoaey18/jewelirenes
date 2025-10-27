@@ -88,22 +88,22 @@ const Inventory = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
 
-      <main className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h2 className="text-4xl font-bold mb-2">Inventory Management</h2>
-            <p className="text-muted-foreground">Manage your jewelry collection</p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Inventory Management</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">Manage your jewelry collection</p>
           </div>
           <Button
             onClick={handleAdd}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {products.map((product) => (
             <Card
               key={product.id}
