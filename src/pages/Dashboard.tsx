@@ -125,7 +125,7 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <h2 className="text-4xl font-bold mb-2">Welcome to Jewelirene's Jewelry</h2>
+          <h2 className="text-4xl font-bold mb-2">Welcome to Store Manager</h2>
           <p className="text-muted-foreground">Here's what's happening with your business today.</p>
         </div>
 

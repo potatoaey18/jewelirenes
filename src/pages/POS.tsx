@@ -101,7 +101,7 @@ const POS = () => {
       <Navigation />
 
       <main className="container mx-auto px-6 py-8">
-        <h2 className="text-4xl font-bold mb-8">Point of Sale - Jewelirene's Jewelry</h2>
+        <h2 className="text-4xl font-bold mb-8">Point of Sale</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
