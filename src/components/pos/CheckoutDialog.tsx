@@ -119,7 +119,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
 
       if (transactionError) throw transactionError;
 
-      // Create transaction items
+      // Create transaction items and update stock
       const items = cart.map((item) => ({
         transaction_id: transaction.id,
         product_id: item.id,
@@ -134,6 +134,25 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
         .insert(items);
 
       if (itemsError) throw itemsError;
+
+      // Decrease stock for each product
+      for (const item of cart) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", item.id)
+          .single();
+
+        if (product) {
+          const newStock = Math.max(0, product.stock - item.quantity);
+          const { error: stockError } = await supabase
+            .from("products")
+            .update({ stock: newStock })
+            .eq("id", item.id);
+
+          if (stockError) throw stockError;
+        }
+      }
 
       toast.success("Sale completed successfully!");
       onSuccess();
