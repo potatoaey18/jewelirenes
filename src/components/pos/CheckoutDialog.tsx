@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, Eye, X } from "lucide-react";
+import { Upload, Eye, X, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CartItem {
   id: string;
@@ -27,12 +30,34 @@ interface CheckoutDialogProps {
 const PAYMENT_TYPES = ["Cash", "Credit Card", "Debit Card", "Bank Transfer", "Check"];
 
 export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: CheckoutDialogProps) => {
-  const [customerName, setCustomerName] = useState("");
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [showNewCustomerInput, setShowNewCustomerInput] = useState(false);
   const [paymentType, setPaymentType] = useState("");
+  const [taxPercentage, setTaxPercentage] = useState("10");
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [invoicePreview, setInvoicePreview] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchCustomers();
+    }
+  }, [open]);
+
+  const fetchCustomers = async () => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, name")
+      .order("name");
+    
+    if (!error && data) {
+      setCustomers(data);
+    }
+  };
 
   const handleInvoiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,31 +72,33 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
   };
 
   const handleSubmit = async () => {
-    if (!customerName.trim()) {
-      toast.error("Please enter customer name");
+    // Validate customer
+    if (!selectedCustomerId && !newCustomerName.trim()) {
+      toast.error("Please select or add a customer");
       return;
     }
     if (!paymentType) {
       toast.error("Please select payment type");
       return;
     }
+    const taxValue = parseFloat(taxPercentage);
+    if (isNaN(taxValue) || taxValue < 0 || taxValue > 100) {
+      toast.error("Please enter a valid tax percentage (0-100)");
+      return;
+    }
 
     setLoading(true);
     try {
-      // Find or create customer
+      // Get or create customer
       let customerId: string;
-      const { data: existingCustomer } = await supabase
-        .from("customers")
-        .select("id")
-        .ilike("name", customerName.trim())
-        .maybeSingle();
-
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
+      
+      if (selectedCustomerId) {
+        customerId = selectedCustomerId;
       } else {
+        // Create new customer
         const { data: newCustomer, error: customerError } = await supabase
           .from("customers")
-          .insert({ name: customerName.trim() })
+          .insert({ name: newCustomerName.trim() })
           .select("id")
           .single();
 
@@ -100,7 +127,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
 
       // Calculate tax and total
       const subtotal = total;
-      const tax = subtotal * 0.1;
+      const tax = subtotal * (parseFloat(taxPercentage) / 100);
       const totalAmount = subtotal + tax;
 
       // Create transaction
@@ -159,8 +186,11 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       onOpenChange(false);
       
       // Reset form
-      setCustomerName("");
+      setSelectedCustomerId("");
+      setNewCustomerName("");
+      setShowNewCustomerInput(false);
       setPaymentType("");
+      setTaxPercentage("10");
       setInvoiceFile(null);
       setInvoicePreview(null);
     } catch (error: any) {
@@ -180,15 +210,82 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Customer Name */}
+            {/* Customer Selection */}
             <div className="space-y-2">
-              <Label htmlFor="customerName">Customer Name *</Label>
-              <Input
-                id="customerName"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter customer name"
-              />
+              <Label>Customer *</Label>
+              {!showNewCustomerInput ? (
+                <div className="flex gap-2">
+                  <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={customerSearchOpen}
+                        className="flex-1 justify-between"
+                      >
+                        {selectedCustomerId
+                          ? customers.find((c) => c.id === selectedCustomerId)?.name
+                          : "Select customer..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search customer..." />
+                        <CommandList>
+                          <CommandEmpty>No customer found.</CommandEmpty>
+                          <CommandGroup>
+                            {customers.map((customer) => (
+                              <CommandItem
+                                key={customer.id}
+                                value={customer.name}
+                                onSelect={() => {
+                                  setSelectedCustomerId(customer.id);
+                                  setCustomerSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {customer.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowNewCustomerInput(true)}
+                  >
+                    Add New
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter new customer name"
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowNewCustomerInput(false);
+                      setNewCustomerName("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Payment Type */}
@@ -206,6 +303,21 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Tax Percentage */}
+            <div className="space-y-2">
+              <Label htmlFor="taxPercentage">Tax Percentage (%)</Label>
+              <Input
+                id="taxPercentage"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={taxPercentage}
+                onChange={(e) => setTaxPercentage(e.target.value)}
+                placeholder="Enter tax percentage"
+              />
             </div>
 
             {/* Invoice Image */}
@@ -287,12 +399,12 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                 <span>₱{total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Tax (10%)</span>
-                <span>₱{(total * 0.1).toLocaleString()}</span>
+                <span>Tax ({taxPercentage}%)</span>
+                <span>₱{(total * (parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-accent border-t border-border pt-2">
                 <span>Total</span>
-                <span>₱{(total * 1.1).toLocaleString()}</span>
+                <span>₱{(total * (1 + parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
               </div>
             </div>
           </div>
