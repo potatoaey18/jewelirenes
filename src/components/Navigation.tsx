@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen, LogOut } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen, LogOut, DollarSign, Wallet, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,13 @@ const Navigation = () => {
 
   const links = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/pos", icon: ShoppingCart, label: "POS" },
+    { to: "/sales", icon: ShoppingCart, label: "Sales" },
     { to: "/inventory", icon: Package, label: "Inventory" },
     { to: "/customers", icon: Users, label: "Customers" },
+    { to: "/expenses", icon: DollarSign, label: "Expenses" },
+    { to: "/collections", icon: Wallet, label: "Collections" },
     { to: "/files", icon: FolderOpen, label: "Files" },
+    { to: "/logs", icon: FileText, label: "Logs" },
   ];
 
   useEffect(() => {

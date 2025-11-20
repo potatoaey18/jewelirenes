@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, Eye, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface CartItem {
   id: string;
@@ -141,7 +142,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
           total_amount: totalAmount,
           invoice_image_url: invoiceUrl,
         })
-        .select("id")
+        .select("*")
         .single();
 
       if (transactionError) throw transactionError;
@@ -180,6 +181,14 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
           if (stockError) throw stockError;
         }
       }
+
+      // Create audit log for transaction
+      await createAuditLog('CREATE', 'transactions', transaction.id, undefined, {
+        customer_id: customerId,
+        total_amount: transaction.total_amount,
+        payment_type: paymentType,
+        items: cart.length
+      });
 
       toast.success("Sale completed successfully!");
       onSuccess();
