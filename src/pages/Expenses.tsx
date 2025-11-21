@@ -84,7 +84,7 @@ export default function Expenses() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto p-6 md:p-8 lg:p-10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
           <div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-2">Expenses</h1>

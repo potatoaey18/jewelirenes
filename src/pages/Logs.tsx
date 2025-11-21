@@ -59,7 +59,7 @@ export default function Logs() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto p-4 md:p-6 lg:p-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Activity Logs</h1>
           <p className="text-muted-foreground">
@@ -127,24 +127,16 @@ export default function Logs() {
         </Card>
 
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Activity Log Details</DialogTitle>
+              <DialogTitle className="text-2xl">Log Details</DialogTitle>
             </DialogHeader>
             {selectedLog && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-6 text-base">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
-                    <p className="text-sm">{new Date(selectedLog.created_at).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">User</p>
-                    <p className="text-sm">{selectedLog.user_email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Action</p>
-                    <Badge variant={
+                    <p className="text-sm font-semibold text-muted-foreground">Action</p>
+                    <Badge className="mt-1 text-sm" variant={
                       selectedLog.action === 'CREATE' ? 'default' :
                       selectedLog.action === 'UPDATE' ? 'secondary' :
                       selectedLog.action === 'DELETE' ? 'destructive' :
@@ -154,34 +146,44 @@ export default function Logs() {
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Module</p>
-                    <Badge variant="outline">{getModuleName(selectedLog.table_name)}</Badge>
+                    <p className="text-sm font-semibold text-muted-foreground">Module</p>
+                    <Badge className="mt-1 text-sm" variant="outline">{getModuleName(selectedLog.table_name)}</Badge>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Table</p>
-                    <p className="text-sm font-mono">{selectedLog.table_name}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">User</p>
+                    <p className="text-muted-foreground mt-1">{selectedLog.user_email}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Record ID</p>
-                    <p className="text-sm font-mono text-xs">{selectedLog.record_id || 'N/A'}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">Time</p>
+                    <p className="text-muted-foreground mt-1">{new Date(selectedLog.created_at).toLocaleString()}</p>
                   </div>
                 </div>
                 
                 {selectedLog.old_data && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Old Data</p>
-                    <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(selectedLog.old_data, null, 2)}
-                    </pre>
+                    <p className="text-base font-semibold mb-3">Previous Data</p>
+                    <div className="space-y-2 p-4 bg-muted rounded-lg">
+                      {Object.entries(selectedLog.old_data).map(([key, value]) => (
+                        <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                          <span className="font-medium text-sm min-w-[140px]">{key}:</span>
+                          <span className="text-muted-foreground break-all text-sm">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 
                 {selectedLog.new_data && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">New Data</p>
-                    <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(selectedLog.new_data, null, 2)}
-                    </pre>
+                    <p className="text-base font-semibold mb-3">New Data</p>
+                    <div className="space-y-2 p-4 bg-muted rounded-lg">
+                      {Object.entries(selectedLog.new_data).map(([key, value]) => (
+                        <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                          <span className="font-medium text-sm min-w-[140px]">{key}:</span>
+                          <span className="text-muted-foreground break-all text-sm">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

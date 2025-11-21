@@ -159,7 +159,6 @@ const Customers = () => {
                   ) : (
                     <User className="h-16 w-16 text-accent/40" />
                   )}
-                  <div className="absolute top-3 right-3">{getTierBadge(customer.tier)}</div>
                 </div>
               <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                 <div>
