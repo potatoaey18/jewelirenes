@@ -84,11 +84,11 @@ export default function Expenses() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div className="container mx-auto p-6 md:p-8 lg:p-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Expenses</h1>
-            <p className="text-muted-foreground">Track and manage business expenses</p>
+            <h1 className="text-4xl sm:text-5xl font-bold mb-2">Expenses</h1>
+            <p className="text-muted-foreground text-lg">Track and manage business expenses</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -101,10 +101,10 @@ export default function Expenses() {
               <DialogHeader>
                 <DialogTitle>Add New Expense</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="amount">Amount (₱)</Label>
+                    <Label htmlFor="amount" className="text-base font-semibold mb-2 block">Amount (₱)</Label>
                     <Input
                       id="amount"
                       type="number"
@@ -112,22 +112,24 @@ export default function Expenses() {
                       required
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                      className="h-12 text-base"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="expense_date">Date</Label>
+                    <Label htmlFor="expense_date" className="text-base font-semibold mb-2 block">Date</Label>
                     <Input
                       id="expense_date"
                       type="date"
                       required
                       value={formData.expense_date}
                       onChange={(e) => setFormData({...formData, expense_date: e.target.value})}
+                      className="h-12 text-base"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="category">Category</Label>
+                    <Label htmlFor="category" className="text-base font-semibold mb-2 block">Category</Label>
                     <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 text-base">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -142,17 +144,18 @@ export default function Expenses() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="vendor">Vendor</Label>
+                    <Label htmlFor="vendor" className="text-base font-semibold mb-2 block">Vendor</Label>
                     <Input
                       id="vendor"
                       value={formData.vendor}
                       onChange={(e) => setFormData({...formData, vendor: e.target.value})}
+                      className="h-12 text-base"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="payment_method">Payment Method</Label>
+                    <Label htmlFor="payment_method" className="text-base font-semibold mb-2 block">Payment Method</Label>
                     <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 text-base">
                         <SelectValue placeholder="Select method" />
                       </SelectTrigger>
                       <SelectContent>
@@ -165,46 +168,48 @@ export default function Expenses() {
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description" className="text-base font-semibold mb-2 block">Description</Label>
                     <Input
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      className="h-12 text-base"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor="notes">Notes</Label>
+                    <Label htmlFor="notes" className="text-base font-semibold mb-2 block">Notes</Label>
                     <Textarea
                       id="notes"
                       value={formData.notes}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      className="min-h-[100px] text-base"
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full">Add Expense</Button>
+                <Button type="submit" className="w-full text-lg">Add Expense</Button>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
-        <Card className="mb-6 p-6">
+        <Card className="mb-8 p-8">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-3xl font-bold">₱{totalExpenses.toFixed(2)}</p>
+              <p className="text-base text-muted-foreground mb-2">Total Expenses</p>
+              <p className="text-4xl sm:text-5xl font-bold">₱{totalExpenses.toFixed(2)}</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <div className="mb-4">
+        <Card className="p-6 sm:p-8">
+          <div className="mb-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
               <Input
                 placeholder="Search expenses..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-14 text-base"
               />
             </div>
           </div>
@@ -212,24 +217,24 @@ export default function Expenses() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Payment Method</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                <TableRow className="text-base">
+                  <TableHead className="text-base font-semibold">Date</TableHead>
+                  <TableHead className="text-base font-semibold">Description</TableHead>
+                  <TableHead className="text-base font-semibold">Category</TableHead>
+                  <TableHead className="text-base font-semibold">Vendor</TableHead>
+                  <TableHead className="text-base font-semibold">Payment Method</TableHead>
+                  <TableHead className="text-right text-base font-semibold">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell>{expense.category}</TableCell>
-                    <TableCell>{expense.vendor}</TableCell>
-                    <TableCell>{expense.payment_method}</TableCell>
-                    <TableCell className="text-right font-medium">₱{Number(expense.amount).toFixed(2)}</TableCell>
+                  <TableRow key={expense.id} className="text-base">
+                    <TableCell className="py-4">{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
+                    <TableCell className="py-4">{expense.description}</TableCell>
+                    <TableCell className="py-4">{expense.category}</TableCell>
+                    <TableCell className="py-4">{expense.vendor}</TableCell>
+                    <TableCell className="py-4">{expense.payment_method}</TableCell>
+                    <TableCell className="text-right font-semibold py-4 text-lg">₱{Number(expense.amount).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
