@@ -28,6 +28,8 @@ export default function Collections() {
   const [planFormData, setPlanFormData] = useState({
     customer_id: '',
     transaction_id: '',
+    item_name: '',
+    sku: '',
     total_amount: '',
     amount_paid: '0',
     balance: '',
@@ -39,7 +41,8 @@ export default function Collections() {
     payment_date: new Date().toISOString().split('T')[0],
     due_date: '',
     payment_method: '',
-    notes: ''
+    notes: '',
+    invoice_image: null as File | null
   });
 
   const { data: customers = [] } = useQuery({
@@ -56,7 +59,7 @@ export default function Collections() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('transactions')
-        .select('*, customers(name)')
+        .select('*, customers(name), transaction_items(product_name, product_id, products(sku))')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -142,6 +145,8 @@ export default function Collections() {
     setPlanFormData({
       customer_id: '',
       transaction_id: '',
+      item_name: '',
+      sku: '',
       total_amount: '',
       amount_paid: '0',
       balance: '',
@@ -155,7 +160,8 @@ export default function Collections() {
       payment_date: new Date().toISOString().split('T')[0],
       due_date: '',
       payment_method: '',
-      notes: ''
+      notes: '',
+      invoice_image: null
     });
   };
 
@@ -189,12 +195,12 @@ export default function Collections() {
             <DialogTrigger asChild>
               <Button className="w-full md:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                New Payment Plan
+                New Record
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create Payment Plan</DialogTitle>
+                <DialogTitle>Create New Record</DialogTitle>
               </DialogHeader>
               <form onSubmit={handlePlanSubmit} className="space-y-4">
                 <div>
@@ -214,7 +220,22 @@ export default function Collections() {
                 </div>
                 <div>
                   <Label htmlFor="transaction_id">Transaction</Label>
-                  <Select value={planFormData.transaction_id} onValueChange={(value) => setPlanFormData({...planFormData, transaction_id: value})}>
+                  <Select 
+                    value={planFormData.transaction_id} 
+                    onValueChange={(value) => {
+                      const selectedTransaction = transactions.find(t => t.id === value);
+                      const itemName = selectedTransaction?.transaction_items?.[0]?.product_name || '';
+                      const sku = selectedTransaction?.transaction_items?.[0]?.products?.sku || '';
+                      const totalAmount = selectedTransaction?.total_amount?.toString() || '';
+                      setPlanFormData({
+                        ...planFormData, 
+                        transaction_id: value,
+                        item_name: itemName,
+                        sku: sku,
+                        total_amount: totalAmount
+                      });
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select transaction" />
                     </SelectTrigger>
@@ -228,6 +249,24 @@ export default function Collections() {
                   </Select>
                 </div>
                 <div>
+                  <Label htmlFor="item_name">Item Name</Label>
+                  <Input
+                    id="item_name"
+                    value={planFormData.item_name}
+                    onChange={(e) => setPlanFormData({...planFormData, item_name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sku">SKU</Label>
+                  <Input
+                    id="sku"
+                    value={planFormData.sku}
+                    onChange={(e) => setPlanFormData({...planFormData, sku: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
                   <Label htmlFor="total_amount">Total Amount (₱)</Label>
                   <Input
                     id="total_amount"
@@ -235,7 +274,7 @@ export default function Collections() {
                     step="0.01"
                     required
                     value={planFormData.total_amount}
-                    onChange={(e) => setPlanFormData({...planFormData, total_amount: e.target.value})}
+                    disabled
                   />
                 </div>
                 <div>
@@ -248,7 +287,7 @@ export default function Collections() {
                     onChange={(e) => setPlanFormData({...planFormData, amount_paid: e.target.value})}
                   />
                 </div>
-                <Button type="submit" className="w-full">Create Plan</Button>
+                <Button type="submit" className="w-full">Create Record</Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -405,6 +444,15 @@ export default function Collections() {
                   id="notes"
                   value={paymentFormData.notes}
                   onChange={(e) => setPaymentFormData({...paymentFormData, notes: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="invoice_image">Invoice Image (Optional)</Label>
+                <Input
+                  id="invoice_image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPaymentFormData({...paymentFormData, invoice_image: e.target.files?.[0] || null})}
                 />
               </div>
               <Button type="submit" className="w-full">Record Payment</Button>
