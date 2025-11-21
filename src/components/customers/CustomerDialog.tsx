@@ -103,8 +103,28 @@ export const CustomerDialog = ({ open, onOpenChange, customer, onSuccess }: Cust
         if (error) throw error;
         toast.success("Customer updated successfully");
       } else {
-        const { error } = await supabase.from("customers").insert(customerData);
+        const { data: newCustomer, error } = await supabase
+          .from("customers")
+          .insert(customerData)
+          .select()
+          .single();
+        
         if (error) throw error;
+
+        // Create folder for new customer
+        const folderPath = `/customers/${newCustomer.name}`;
+        const { error: folderError } = await supabase
+          .from("folders")
+          .insert({
+            name: newCustomer.name,
+            path: folderPath,
+            parent_id: null,
+          });
+
+        if (folderError) {
+          console.error("Failed to create customer folder:", folderError);
+        }
+
         toast.success("Customer created successfully");
       }
 

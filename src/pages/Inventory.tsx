@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit, Trash2 } from "lucide-react";
+import { Package, Plus, Edit, Trash2, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ProductDialog } from "@/components/inventory/ProductDialog";
+import { TransactionHistoryDialog } from "@/components/inventory/TransactionHistoryDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,8 @@ const Inventory = () => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [productTransactions, setProductTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProducts();
@@ -78,6 +81,29 @@ const Inventory = () => {
     }
   };
 
+  const handleViewHistory = async (product: any) => {
+    setSelectedProduct(product);
+    try {
+      const { data, error } = await supabase
+        .from("transaction_items")
+        .select(`
+          *,
+          transactions(
+            *,
+            customers(name)
+          )
+        `)
+        .eq("product_id", product.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setProductTransactions(data || []);
+      setHistoryDialogOpen(true);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const getStockBadge = (stock: number) => {
     if (stock < 10) return <Badge variant="destructive">Low Stock</Badge>;
     if (stock < 20) return <Badge className="bg-amber-500">Medium</Badge>;
@@ -88,7 +114,7 @@ const Inventory = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
 
-      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Inventory Management</h2>
@@ -107,7 +133,8 @@ const Inventory = () => {
           {products.map((product) => (
             <Card
               key={product.id}
-              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 overflow-hidden"
+              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 overflow-hidden cursor-pointer"
+              onClick={() => handleViewHistory(product)}
             >
               <div className="h-48 bg-gradient-to-br from-accent/20 to-accent/5 relative flex items-center justify-center">
                 {product.image_url ? (
@@ -162,7 +189,10 @@ const Inventory = () => {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleEdit(product)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(product);
+                    }}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
@@ -171,7 +201,10 @@ const Inventory = () => {
                     variant="ghost"
                     size="sm"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteClick(product.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(product.id);
+                    }}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -187,6 +220,13 @@ const Inventory = () => {
         onOpenChange={setDialogOpen}
         product={selectedProduct}
         onSuccess={fetchProducts}
+      />
+
+      <TransactionHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        product={selectedProduct}
+        transactions={productTransactions}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

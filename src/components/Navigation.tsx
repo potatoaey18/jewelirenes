@@ -14,7 +14,7 @@ const Navigation = () => {
 
   const links = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/sales", icon: ShoppingCart, label: "Sales" },
+    { to: "/sales", icon: ShoppingCart, label: "Sale" },
     { to: "/inventory", icon: Package, label: "Inventory" },
     { to: "/customers", icon: Users, label: "Customers" },
     { to: "/expenses", icon: DollarSign, label: "Expenses" },
