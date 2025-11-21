@@ -45,37 +45,37 @@ const Navigation = () => {
   };
 
   return (
-    <nav className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+    <nav className="border-b-2 border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-14 sm:h-16">
-          <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
-            <h1 className="text-lg sm:text-xl font-bold">Store Manager</h1>
+        <div className="flex items-center justify-between h-16 sm:h-20">
+          <div className="flex items-center gap-3">
+            <Crown className="h-7 w-7 sm:h-8 sm:w-8 text-accent" />
+            <h1 className="text-xl sm:text-2xl font-bold">Store Manager</h1>
           </div>
           
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="flex gap-0.5 sm:gap-1">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
               {links.map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
                   to={to}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg transition-all duration-200",
+                      "flex items-center gap-2 px-3 sm:px-4 py-3 rounded-lg transition-all duration-200 min-h-[44px]",
                       "hover:bg-secondary",
-                      isActive && "bg-accent text-accent-foreground font-medium"
+                      isActive && "bg-accent text-accent-foreground font-medium shadow-sm"
                     )
                   }
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden md:inline text-sm">{label}</span>
+                  <Icon className="h-5 w-5" />
+                  <span className="hidden lg:inline text-base">{label}</span>
                 </NavLink>
               ))}
             </div>
             {user && (
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-1 sm:ml-2">
-                <LogOut className="h-4 w-4" />
-                <span className="hidden md:inline ml-2">Logout</span>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-2">
+                <LogOut className="h-5 w-5" />
+                <span className="hidden lg:inline ml-2">Logout</span>
               </Button>
             )}
           </div>
