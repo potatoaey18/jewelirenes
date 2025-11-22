@@ -154,7 +154,7 @@ const Sales = () => {
                       {product.category}
                     </p>
                     <p className="text-base md:text-lg font-bold text-accent">
-                      ₱{product.price.toFixed(2)}
+                      Php {product.price.toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>
@@ -165,7 +165,7 @@ const Sales = () => {
           <div className="lg:sticky lg:top-4 h-fit">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">Shopping Cart</CardTitle>
+                <CardTitle className="text-xl md:text-2xl">Sale</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {cart.length === 0 ? (
@@ -178,7 +178,7 @@ const Sales = () => {
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm md:text-base truncate">{item.name}</p>
                             <p className="text-xs md:text-sm text-muted-foreground">
-                              ₱{item.price.toFixed(2)} each
+                              Php {item.price.toFixed(2)} each
                             </p>
                           </div>
                           <div className="flex items-center gap-1 md:gap-2">
@@ -217,15 +217,15 @@ const Sales = () => {
                     <div className="space-y-2 pt-3 md:pt-4 border-t">
                       <div className="flex justify-between text-sm md:text-base">
                         <span>Subtotal:</span>
-                        <span className="font-medium">₱{subtotal.toFixed(2)}</span>
+                        <span className="font-medium">Php {subtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm md:text-base">
                         <span>Tax (12%):</span>
-                        <span className="font-medium">₱{tax.toFixed(2)}</span>
+                        <span className="font-medium">Php {tax.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-base md:text-lg font-bold pt-2 border-t">
                         <span>Total:</span>
-                        <span className="text-accent">₱{grandTotal.toFixed(2)}</span>
+                        <span className="text-accent">Php {grandTotal.toFixed(2)}</span>
                       </div>
                     </div>
 

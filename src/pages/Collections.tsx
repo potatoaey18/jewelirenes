@@ -242,7 +242,7 @@ export default function Collections() {
                     <SelectContent>
                       {transactions.map((transaction) => (
                         <SelectItem key={transaction.id} value={transaction.id}>
-                          ₱{Number(transaction.total_amount).toFixed(2)} - {transaction.customers?.name}
+                          Php {Number(transaction.total_amount).toFixed(2)} - {transaction.customers?.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -267,7 +267,7 @@ export default function Collections() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="total_amount">Total Amount (₱)</Label>
+                  <Label htmlFor="total_amount">Total Amount (Php)</Label>
                   <Input
                     id="total_amount"
                     type="number"
@@ -278,7 +278,7 @@ export default function Collections() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="amount_paid">Initial Payment (₱)</Label>
+                  <Label htmlFor="amount_paid">Initial Payment (Php)</Label>
                   <Input
                     id="amount_paid"
                     type="number"
@@ -329,9 +329,9 @@ export default function Collections() {
                     {filteredPlans.map((plan) => (
                       <TableRow key={plan.id}>
                         <TableCell className="font-medium">{plan.customers?.name}</TableCell>
-                        <TableCell>₱{Number(plan.total_amount).toFixed(2)}</TableCell>
-                        <TableCell>₱{Number(plan.amount_paid).toFixed(2)}</TableCell>
-                        <TableCell>₱{Number(plan.balance).toFixed(2)}</TableCell>
+                        <TableCell>Php {Number(plan.total_amount).toFixed(2)}</TableCell>
+                        <TableCell>Php {Number(plan.amount_paid).toFixed(2)}</TableCell>
+                        <TableCell>Php {Number(plan.balance).toFixed(2)}</TableCell>
                         <TableCell>
                           <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'}>
                             {plan.status}
@@ -376,7 +376,7 @@ export default function Collections() {
                       <TableRow key={collection.id}>
                         <TableCell>{new Date(collection.payment_date).toLocaleDateString()}</TableCell>
                         <TableCell>{collection.payment_plans?.customers?.name}</TableCell>
-                        <TableCell className="font-medium">₱{Number(collection.amount_paid).toFixed(2)}</TableCell>
+                        <TableCell className="font-medium">Php {Number(collection.amount_paid).toFixed(2)}</TableCell>
                         <TableCell>{collection.payment_method}</TableCell>
                         <TableCell>{collection.notes}</TableCell>
                       </TableRow>
@@ -400,10 +400,10 @@ export default function Collections() {
               </div>
               <div>
                 <Label>Remaining Balance</Label>
-                <Input value={`₱${Number(selectedPlan?.balance || 0).toFixed(2)}`} disabled />
+                <Input value={`Php ${Number(selectedPlan?.balance || 0).toFixed(2)}`} disabled />
               </div>
               <div>
-                <Label htmlFor="amount_paid">Payment Amount (₱)</Label>
+                <Label htmlFor="amount_paid">Payment Amount (Php)</Label>
                 <Input
                   id="amount_paid"
                   type="number"

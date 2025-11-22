@@ -41,7 +41,7 @@ export const TransactionHistoryDialog = ({
                   <div className="text-left sm:text-right space-y-1">
                     <p className="text-muted-foreground text-sm">Transaction Total</p>
                     <p className="text-2xl font-bold text-accent">
-                      ₱{parseFloat(item.transactions?.total_amount || "0").toLocaleString()}
+                      Php {parseFloat(item.transactions?.total_amount || "0").toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -53,11 +53,11 @@ export const TransactionHistoryDialog = ({
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Unit Price</p>
-                    <p className="text-lg font-semibold">₱{parseFloat(item.unit_price).toLocaleString()}</p>
+                    <p className="text-lg font-semibold">Php {parseFloat(item.unit_price).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Subtotal</p>
-                    <p className="text-lg font-semibold text-accent">₱{parseFloat(item.subtotal).toLocaleString()}</p>
+                    <p className="text-lg font-semibold text-accent">Php {parseFloat(item.subtotal).toLocaleString()}</p>
                   </div>
                 </div>
 

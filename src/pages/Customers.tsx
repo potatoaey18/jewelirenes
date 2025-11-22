@@ -188,7 +188,7 @@ const Customers = () => {
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-border">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Total Spent</p>
-                    <p className="text-base sm:text-lg font-bold text-accent">₱{totalSpent.toLocaleString()}</p>
+                    <p className="text-base sm:text-lg font-bold text-accent">Php {totalSpent.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Purchases</p>

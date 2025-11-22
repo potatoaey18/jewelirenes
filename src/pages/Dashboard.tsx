@@ -91,7 +91,7 @@ const Dashboard = () => {
   const statsData = [
     {
       title: "Today's Sales",
-      value: `₱${stats.todaySales.toLocaleString()}`,
+      value: `Php ${stats.todaySales.toLocaleString()}`,
       icon: DollarSign,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -112,7 +112,7 @@ const Dashboard = () => {
     },
     {
       title: "Revenue",
-      value: `₱${stats.totalRevenue.toLocaleString()}`,
+      value: `Php ${stats.totalRevenue.toLocaleString()}`,
       icon: TrendingUp,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -174,7 +174,7 @@ const Dashboard = () => {
                         <p className="text-xs sm:text-sm text-muted-foreground">{customerName}</p>
                       </div>
                       <div className="text-left sm:text-right w-full sm:w-auto">
-                        <p className="font-bold text-accent text-sm sm:text-base">₱{Number(sale.total_amount).toLocaleString()}</p>
+                        <p className="font-bold text-accent text-sm sm:text-base">Php {Number(sale.total_amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">{timeAgo}</p>
                       </div>
                     </div>
