@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, ShoppingBag, Users, DollarSign } from "lucide-react";
+import { TrendingUp, ShoppingBag, Users, DollarSign, Receipt } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
+import { TrendDialog } from "@/components/dashboard/TrendDialog";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -10,8 +12,16 @@ const Dashboard = () => {
     todayOrders: 0,
     totalCustomers: 0,
     totalRevenue: 0,
+    totalExpenses: 0,
   });
   const [recentSales, setRecentSales] = useState<any[]>([]);
+  const [trendDialog, setTrendDialog] = useState<{
+    open: boolean;
+    title: string;
+    data: Array<{ date: string; value: number; details?: any }>;
+    type?: string;
+  }>({ open: false, title: "", data: [] });
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchStats();
@@ -64,11 +74,19 @@ const Dashboard = () => {
 
     const totalRevenue = allTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
 
+    // Total expenses
+    const { data: allExpenses } = await supabase
+      .from("expenses")
+      .select("amount");
+
+    const totalExpenses = allExpenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+
     setStats({
       todaySales,
       todayOrders,
       totalCustomers: totalCustomers || 0,
       totalRevenue,
+      totalExpenses,
     });
   };
 
@@ -88,6 +106,83 @@ const Dashboard = () => {
     setRecentSales(data || []);
   };
 
+  const fetchTrendData = async (type: string) => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    if (type === "sales" || type === "revenue") {
+      const { data } = await supabase
+        .from("transactions")
+        .select("total_amount, created_at, id")
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("created_at", { ascending: true });
+
+      const dailyData = new Map<string, { value: number; transactions: any[] }>();
+      
+      data?.forEach((t) => {
+        const date = new Date(t.created_at).toISOString().split("T")[0];
+        const existing = dailyData.get(date) || { value: 0, transactions: [] };
+        dailyData.set(date, {
+          value: existing.value + Number(t.total_amount),
+          transactions: [...existing.transactions, t],
+        });
+      });
+
+      const trendData = Array.from(dailyData.entries()).map(([date, data]) => ({
+        date,
+        value: data.value,
+        details: { transactions: data.transactions, type: "transaction" },
+      }));
+
+      setTrendDialog({
+        open: true,
+        title: type === "sales" ? "Today's Sales" : "Revenue",
+        data: trendData,
+        type: "transaction",
+      });
+    } else if (type === "expenses") {
+      const { data } = await supabase
+        .from("expenses")
+        .select("amount, expense_date, id")
+        .gte("expense_date", sevenDaysAgo.toISOString())
+        .order("expense_date", { ascending: true });
+
+      const dailyData = new Map<string, { value: number; expenses: any[] }>();
+      
+      data?.forEach((e) => {
+        const date = new Date(e.expense_date).toISOString().split("T")[0];
+        const existing = dailyData.get(date) || { value: 0, expenses: [] };
+        dailyData.set(date, {
+          value: existing.value + Number(e.amount),
+          expenses: [...existing.expenses, e],
+        });
+      });
+
+      const trendData = Array.from(dailyData.entries()).map(([date, data]) => ({
+        date,
+        value: data.value,
+        details: { expenses: data.expenses, type: "expense" },
+      }));
+
+      setTrendDialog({
+        open: true,
+        title: "Expenses",
+        data: trendData,
+        type: "expense",
+      });
+    }
+  };
+
+  const handleDataPointClick = (details: any) => {
+    if (details.type === "transaction" && details.transactions?.[0]) {
+      navigate("/sales");
+      setTrendDialog({ open: false, title: "", data: [] });
+    } else if (details.type === "expense" && details.expenses?.[0]) {
+      navigate("/expenses");
+      setTrendDialog({ open: false, title: "", data: [] });
+    }
+  };
+
   const statsData = [
     {
       title: "Today's Sales",
@@ -95,6 +190,7 @@ const Dashboard = () => {
       icon: DollarSign,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
+      type: "sales",
     },
     {
       title: "Orders",
@@ -102,6 +198,7 @@ const Dashboard = () => {
       icon: ShoppingBag,
       trend: "",
       bgGradient: "from-primary/10 to-primary/5",
+      type: "",
     },
     {
       title: "Customers",
@@ -109,6 +206,7 @@ const Dashboard = () => {
       icon: Users,
       trend: "",
       bgGradient: "from-secondary to-secondary/50",
+      type: "",
     },
     {
       title: "Revenue",
@@ -116,6 +214,15 @@ const Dashboard = () => {
       icon: TrendingUp,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
+      type: "revenue",
+    },
+    {
+      title: "Expenses",
+      value: `Php ${stats.totalExpenses.toLocaleString()}`,
+      icon: Receipt,
+      trend: "",
+      bgGradient: "from-destructive/20 to-destructive/5",
+      type: "expenses",
     },
   ];
 
@@ -129,11 +236,12 @@ const Dashboard = () => {
           <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your business today.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {statsData.map((stat) => (
             <Card
               key={stat.title}
-              className="relative overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+              className="relative overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+              onClick={() => stat.type && fetchTrendData(stat.type)}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-50`} />
               <CardHeader className="relative flex flex-row items-center justify-between pb-2">
@@ -171,7 +279,6 @@ const Dashboard = () => {
                     >
                       <div className="w-full sm:w-auto">
                         <p className="font-medium text-sm sm:text-base">{productName}</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">{customerName}</p>
                       </div>
                       <div className="text-left sm:text-right w-full sm:w-auto">
                         <p className="font-bold text-accent text-sm sm:text-base">Php {Number(sale.total_amount).toLocaleString()}</p>
@@ -184,6 +291,14 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        <TrendDialog
+          open={trendDialog.open}
+          onOpenChange={(open) => setTrendDialog({ ...trendDialog, open })}
+          title={trendDialog.title}
+          data={trendDialog.data}
+          onDataPointClick={handleDataPointClick}
+        />
       </main>
     </div>
   );
