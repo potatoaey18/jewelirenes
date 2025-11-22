@@ -168,12 +168,12 @@ const Index = () => {
       return (
         <div className="bg-card border border-border rounded-lg p-4 shadow-lg">
           <p className="font-semibold text-base mb-2">{data.date}</p>
-          <p className="text-accent text-lg font-bold mb-2">₱{data.value.toLocaleString()}</p>
+          <p className="text-accent text-lg font-bold mb-2">Php {data.value.toLocaleString()}</p>
           {data.transactions && data.transactions.length > 0 && (
             <div className="space-y-1">
               {data.transactions.slice(0, 3).map((t: any, i: number) => (
                 <p key={i} className="text-xs text-muted-foreground">
-                  {t.transaction_items?.[0]?.product_name || "Transaction"} - ₱{parseFloat(t.total_amount).toLocaleString()}
+                  {t.transaction_items?.[0]?.product_name || "Transaction"} - Php {parseFloat(t.total_amount).toLocaleString()}
                 </p>
               ))}
             </div>
@@ -182,7 +182,7 @@ const Index = () => {
             <div className="space-y-1">
               {data.expenses.slice(0, 3).map((e: any, i: number) => (
                 <p key={i} className="text-xs text-muted-foreground">
-                  {e.vendor || e.description || "Expense"} - ₱{parseFloat(e.amount).toLocaleString()}
+                  {e.vendor || e.description || "Expense"} - Php {parseFloat(e.amount).toLocaleString()}
                 </p>
               ))}
             </div>
@@ -196,7 +196,7 @@ const Index = () => {
   const statsData = [
     {
       title: "Today's Sales",
-      value: `₱${stats.todaySales.toLocaleString()}`,
+      value: `Php ${stats.todaySales.toLocaleString()}`,
       icon: TrendingUp,
       gradient: "from-accent/20 to-accent/5",
       metric: "sales",
@@ -217,14 +217,14 @@ const Index = () => {
     },
     {
       title: "Total Revenue",
-      value: `₱${stats.totalRevenue.toLocaleString()}`,
+      value: `Php ${stats.totalRevenue.toLocaleString()}`,
       icon: DollarSign,
       gradient: "from-accent/30 to-accent/10",
       metric: "revenue",
     },
     {
       title: "Total Expenses",
-      value: `₱${stats.totalExpenses.toLocaleString()}`,
+      value: `Php ${stats.totalExpenses.toLocaleString()}`,
       icon: DollarSign,
       gradient: "from-destructive/20 to-destructive/5",
       metric: "expenses",
@@ -308,7 +308,7 @@ const Index = () => {
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className="text-xl sm:text-2xl font-bold text-accent">₱{parseFloat(sale.total_amount).toLocaleString()}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-accent">Php {parseFloat(sale.total_amount).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
