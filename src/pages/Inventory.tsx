@@ -1,252 +1,198 @@
-import { useState, useEffect } from "react";
-import { Package, Plus, Edit, Trash2, History } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { ProductDialog } from "@/components/inventory/ProductDialog";
-import { TransactionHistoryDialog } from "@/components/inventory/TransactionHistoryDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import Navigation from "@/components/Navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Plus, Download } from "lucide-react";
+import { FinishedItemsTab } from "@/components/inventory/FinishedItemsTab";
+import { RawMaterialsTab } from "@/components/inventory/RawMaterialsTab";
+import { FinishedItemDialog } from "@/components/inventory/FinishedItemDialog";
+import { RawMaterialDialog } from "@/components/inventory/RawMaterialDialog";
+import { supabase } from "@/integrations/supabase/client";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 
-const Inventory = () => {
-  const [products, setProducts] = useState<any[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [productTransactions, setProductTransactions] = useState<any[]>([]);
+export default function Inventory() {
+  const [activeTab, setActiveTab] = useState("items");
+  const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const handleAddItem = () => {
+    setSelectedItem(null);
+    setIsItemDialogOpen(true);
+  };
 
-  const fetchProducts = async () => {
+  const handleAddMaterial = () => {
+    setSelectedMaterial(null);
+    setIsMaterialDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const exportItemsPDF = async () => {
     try {
-      const { data, error } = await supabase
-        .from("products")
+      const { data: items, error } = await supabase
+        .from("finished_items")
+        .select(`
+          *,
+          item_materials (
+            quantity_used,
+            cost_at_time,
+            subtotal,
+            raw_materials (name, type)
+          ),
+          item_labor (labor_type, total_cost)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("Finished Items Report", 14, 20);
+      doc.setFontSize(11);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+
+      const tableData = items?.map(item => [
+        new Date(item.date_manufactured).toLocaleDateString(),
+        item.sku,
+        item.name,
+        `Php ${Number(item.total_cost).toFixed(2)}`,
+        `Php ${Number(item.selling_price).toFixed(2)}`,
+        item.stock.toString()
+      ]) || [];
+
+      autoTable(doc, {
+        startY: 35,
+        head: [['Date', 'SKU', 'Name', 'Total Cost', 'Selling Price', 'Stock']],
+        body: tableData,
+      });
+
+      doc.save(`finished-items-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("PDF exported successfully");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Failed to export PDF");
+    }
+  };
+
+  const exportMaterialsPDF = async () => {
+    try {
+      const { data: materials, error } = await supabase
+        .from("raw_materials")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
-    } catch (error: any) {
-      toast.error(error.message);
+
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("Raw Materials Report", 14, 20);
+      doc.setFontSize(11);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+
+      const tableData = materials?.map(material => [
+        material.name,
+        material.type,
+        `${Number(material.quantity_on_hand).toFixed(2)} ${material.unit}`,
+        `Php ${Number(material.cost_per_unit).toFixed(2)}`
+      ]) || [];
+
+      autoTable(doc, {
+        startY: 35,
+        head: [['Name', 'Type', 'Quantity', 'Cost per Unit']],
+        body: tableData,
+      });
+
+      doc.save(`raw-materials-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("PDF exported successfully");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Failed to export PDF");
     }
-  };
-
-  const handleEdit = (product: any) => {
-    setSelectedProduct(product);
-    setDialogOpen(true);
-  };
-
-  const handleAdd = () => {
-    setSelectedProduct(null);
-    setDialogOpen(true);
-  };
-
-  const handleDeleteClick = (productId: string) => {
-    setProductToDelete(productId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!productToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", productToDelete);
-
-      if (error) throw error;
-      toast.success("Product deleted");
-      fetchProducts();
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setDeleteDialogOpen(false);
-      setProductToDelete(null);
-    }
-  };
-
-  const handleViewHistory = async (product: any) => {
-    setSelectedProduct(product);
-    try {
-      const { data, error } = await supabase
-        .from("transaction_items")
-        .select(`
-          *,
-          transactions(
-            *,
-            customers(name)
-          )
-        `)
-        .eq("product_id", product.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setProductTransactions(data || []);
-      setHistoryDialogOpen(true);
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const getStockBadge = (stock: number) => {
-    if (stock < 10) return <Badge variant="destructive">Low Stock</Badge>;
-    if (stock < 20) return <Badge className="bg-amber-500">Medium</Badge>;
-    return <Badge className="bg-green-600">In Stock</Badge>;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
+    <div className="min-h-screen bg-background">
       <Navigation />
+      <div className="container mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl md:text-4xl font-bold">Inventory Management</h1>
+        </div>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Inventory Management</h2>
-            <p className="text-sm sm:text-base text-muted-foreground">Manage your jewelry collection</p>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="items">Finished Items</TabsTrigger>
+            <TabsTrigger value="materials">Raw Materials</TabsTrigger>
+          </TabsList>
+
+          <div className="flex flex-wrap justify-end gap-2 mt-4">
+            {activeTab === "items" && (
+              <>
+                <Button onClick={exportItemsPDF} variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PDF
+                </Button>
+                <Button onClick={handleAddItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Item
+                </Button>
+              </>
+            )}
+            {activeTab === "materials" && (
+              <>
+                <Button onClick={exportMaterialsPDF} variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PDF
+                </Button>
+                <Button onClick={handleAddMaterial}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Material
+                </Button>
+              </>
+            )}
           </div>
-          <Button
-            onClick={handleAdd}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {products.map((product) => (
-            <Card
-              key={product.id}
-              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50 overflow-hidden cursor-pointer"
-              onClick={() => handleViewHistory(product)}
-            >
-              <div className="h-48 bg-gradient-to-br from-accent/20 to-accent/5 relative flex items-center justify-center">
-                {product.image_url ? (
-                  <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <Package className="h-16 w-16 text-accent/40" />
-                )}
-                <div className="absolute top-2 right-2">{getStockBadge(product.stock)}</div>
-              </div>
-              <CardContent className="p-4 space-y-3">
-                <div>
-                  <h3 className="font-bold text-lg mb-1 line-clamp-1">{product.name}</h3>
-                  <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
-                </div>
+          <TabsContent value="items" className="mt-6">
+            <FinishedItemsTab 
+              refreshTrigger={refreshTrigger}
+              onEdit={(item) => {
+                setSelectedItem(item);
+                setIsItemDialogOpen(true);
+              }}
+            />
+          </TabsContent>
 
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs">Metal</p>
-                    <p className="font-medium">{product.metal}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Weight</p>
-                    <p className="font-medium">{product.weight}</p>
-                  </div>
-                  {product.gemstone !== "None" && (
-                    <>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Gemstone</p>
-                        <p className="font-medium">{product.gemstone}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Carat</p>
-                        <p className="font-medium">{product.carat}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
+          <TabsContent value="materials" className="mt-6">
+            <RawMaterialsTab 
+              refreshTrigger={refreshTrigger}
+              onEdit={(material) => {
+                setSelectedMaterial(material);
+                setIsMaterialDialogOpen(true);
+              }}
+            />
+          </TabsContent>
+        </Tabs>
 
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Price</p>
-                    <p className="text-xl font-bold text-accent">Php {product.price.toLocaleString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Stock</p>
-                    <p className="font-bold">{product.stock} units</p>
-                  </div>
-                </div>
+        <FinishedItemDialog
+          open={isItemDialogOpen}
+          onOpenChange={setIsItemDialogOpen}
+          item={selectedItem}
+          onSuccess={handleSuccess}
+        />
 
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(product);
-                    }}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(product.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </main>
-
-      <ProductDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        product={selectedProduct}
-        onSuccess={fetchProducts}
-      />
-
-      <TransactionHistoryDialog
-        open={historyDialogOpen}
-        onOpenChange={setHistoryDialogOpen}
-        product={selectedProduct}
-        transactions={productTransactions}
-      />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this product? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <RawMaterialDialog
+          open={isMaterialDialogOpen}
+          onOpenChange={setIsMaterialDialogOpen}
+          material={selectedMaterial}
+          onSuccess={handleSuccess}
+        />
+      </div>
     </div>
   );
-};
-
-export default Inventory;
+}

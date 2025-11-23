@@ -258,6 +258,48 @@ export type Database = {
           },
         ]
       }
+      finished_items: {
+        Row: {
+          created_at: string
+          date_manufactured: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          selling_price: number
+          sku: string
+          stock: number
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_manufactured: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          selling_price?: number
+          sku: string
+          stock?: number
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_manufactured?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          selling_price?: number
+          sku?: string
+          stock?: number
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       folders: {
         Row: {
           created_at: string
@@ -286,6 +328,92 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_labor: {
+        Row: {
+          amount_per_piece: number | null
+          created_at: string
+          fixed_cost: number | null
+          id: string
+          item_id: string
+          labor_type: Database["public"]["Enums"]["labor_type"]
+          pieces: number | null
+          total_cost: number
+        }
+        Insert: {
+          amount_per_piece?: number | null
+          created_at?: string
+          fixed_cost?: number | null
+          id?: string
+          item_id: string
+          labor_type: Database["public"]["Enums"]["labor_type"]
+          pieces?: number | null
+          total_cost: number
+        }
+        Update: {
+          amount_per_piece?: number | null
+          created_at?: string
+          fixed_cost?: number | null
+          id?: string
+          item_id?: string
+          labor_type?: Database["public"]["Enums"]["labor_type"]
+          pieces?: number | null
+          total_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_labor_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "finished_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_materials: {
+        Row: {
+          cost_at_time: number
+          created_at: string
+          id: string
+          item_id: string
+          material_id: string
+          quantity_used: number
+          subtotal: number
+        }
+        Insert: {
+          cost_at_time: number
+          created_at?: string
+          id?: string
+          item_id: string
+          material_id: string
+          quantity_used: number
+          subtotal: number
+        }
+        Update: {
+          cost_at_time?: number
+          created_at?: string
+          id?: string
+          item_id?: string
+          material_id?: string
+          quantity_used?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_materials_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "finished_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
             referencedColumns: ["id"]
           },
         ]
@@ -422,6 +550,39 @@ export type Database = {
         }
         Relationships: []
       }
+      raw_materials: {
+        Row: {
+          cost_per_unit: number
+          created_at: string
+          id: string
+          name: string
+          quantity_on_hand: number
+          type: Database["public"]["Enums"]["material_type"]
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          name: string
+          quantity_on_hand?: number
+          type: Database["public"]["Enums"]["material_type"]
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          name?: string
+          quantity_on_hand?: number
+          type?: Database["public"]["Enums"]["material_type"]
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transaction_items: {
         Row: {
           id: string
@@ -550,6 +711,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      labor_type: "diamond_setting" | "tubog"
+      material_type: "gold" | "diamond" | "gem" | "south_sea_pearl" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -678,6 +841,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      labor_type: ["diamond_setting", "tubog"],
+      material_type: ["gold", "diamond", "gem", "south_sea_pearl", "other"],
     },
   },
 } as const
