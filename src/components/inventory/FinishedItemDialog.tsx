@@ -183,9 +183,53 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
         if (error) throw error;
 
+        // Get existing materials to restore quantities
+        const { data: existingMaterials } = await supabase
+          .from("item_materials")
+          .select("material_id, quantity_used")
+          .eq("item_id", item.id);
+
+        // Restore quantities from old materials
+        if (existingMaterials) {
+          for (const oldMat of existingMaterials) {
+            const material = rawMaterials.find(m => m.id === oldMat.material_id);
+            if (material) {
+              const restoredQuantity = material.quantity_on_hand + oldMat.quantity_used;
+              await supabase
+                .from("raw_materials")
+                .update({ quantity_on_hand: restoredQuantity })
+                .eq("id", oldMat.material_id);
+            }
+          }
+        }
+
         // Delete existing materials and labor
         await supabase.from("item_materials").delete().eq("item_id", item.id);
         await supabase.from("item_labor").delete().eq("item_id", item.id);
+
+        // Deduct new materials
+        for (const mat of materials) {
+          const material = rawMaterials.find(m => m.id === mat.material_id);
+          if (material) {
+            // Get current quantity (which includes restored amount)
+            const { data: currentMaterial } = await supabase
+              .from("raw_materials")
+              .select("quantity_on_hand")
+              .eq("id", mat.material_id)
+              .single();
+
+            if (currentMaterial) {
+              const newQuantity = currentMaterial.quantity_on_hand - mat.quantity;
+              if (newQuantity < 0) {
+                throw new Error(`Insufficient ${material.name}. Available: ${currentMaterial.quantity_on_hand}, Required: ${mat.quantity}`);
+              }
+              await supabase
+                .from("raw_materials")
+                .update({ quantity_on_hand: newQuantity })
+                .eq("id", mat.material_id);
+            }
+          }
+        }
       } else {
         const { data: newItem, error } = await supabase
           .from("finished_items")
@@ -201,6 +245,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           const material = rawMaterials.find(m => m.id === mat.material_id);
           if (material) {
             const newQuantity = material.quantity_on_hand - mat.quantity;
+            if (newQuantity < 0) {
+              throw new Error(`Insufficient ${material.name}. Available: ${material.quantity_on_hand}, Required: ${mat.quantity}`);
+            }
             await supabase
               .from("raw_materials")
               .update({ quantity_on_hand: newQuantity })
