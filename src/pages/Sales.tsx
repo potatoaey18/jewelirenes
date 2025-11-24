@@ -16,52 +16,59 @@ interface CartItem {
   image_url?: string;
 }
 
-interface Product {
+interface FinishedItem {
   id: string;
   name: string;
-  price: number;
-  category: string;
+  selling_price: number;
+  description: string | null;
   image_url?: string;
+  stock: number;
 }
 
 const Sales = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [items, setItems] = useState<FinishedItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
+    fetchItems();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchItems = async () => {
     const { data, error } = await supabase
-      .from("products")
-      .select("id, name, price, category, image_url")
+      .from("finished_items")
+      .select("id, name, selling_price, description, image_url, stock")
       .gt("stock", 0);
 
     if (error) {
-      toast.error("Failed to load products");
+      toast.error("Failed to load items");
       console.error(error);
     } else {
-      setProducts(data || []);
+      setItems(data || []);
     }
   };
 
-  const addToCart = (product: Product) => {
-    const existingItem = cart.find((item) => item.id === product.id);
+  const addToCart = (item: FinishedItem) => {
+    const existingItem = cart.find((cartItem) => cartItem.id === item.id);
     if (existingItem) {
       setCart(
-        cart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+        cart.map((cartItem) =>
+          cartItem.id === item.id
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
         )
       );
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([...cart, { 
+        id: item.id, 
+        name: item.name, 
+        price: item.selling_price, 
+        quantity: 1,
+        image_url: item.image_url || undefined 
+      }]);
     }
-    toast.success(`${product.name} added to cart`);
+    toast.success(`${item.name} added to cart`);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -95,11 +102,11 @@ const Sales = () => {
   const handleCheckoutSuccess = () => {
     setCart([]);
     setCheckoutOpen(false);
-    fetchProducts();
+    fetchItems();
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase())
+  const filteredItems = items.filter((item) =>
+    item.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const TAX_RATE = 0.12;
@@ -117,7 +124,7 @@ const Sales = () => {
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold">Sales</h1>
                 <p className="text-sm md:text-base text-muted-foreground">
-                  Select products to add to cart
+                  Select finished items to add to cart
                 </p>
               </div>
             </div>
@@ -125,7 +132,7 @@ const Sales = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search products..."
+                placeholder="Search items..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -133,28 +140,28 @@ const Sales = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
-              {filteredProducts.map((product) => (
+              {filteredItems.map((item) => (
                 <Card
-                  key={product.id}
+                  key={item.id}
                   className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
-                  onClick={() => addToCart(product)}
+                  onClick={() => addToCart(item)}
                 >
                   <CardContent className="p-3 md:p-4">
-                    {product.image_url && (
+                    {item.image_url && (
                       <img
-                        src={product.image_url}
-                        alt={product.name}
+                        src={item.image_url}
+                        alt={item.name}
                         className="w-full h-24 md:h-32 object-cover rounded-md mb-2"
                       />
                     )}
                     <h3 className="font-semibold text-sm md:text-base line-clamp-2 mb-1">
-                      {product.name}
+                      {item.name}
                     </h3>
-                    <p className="text-xs md:text-sm text-muted-foreground mb-1">
-                      {product.category}
+                    <p className="text-xs md:text-sm text-muted-foreground mb-1 line-clamp-1">
+                      {item.description || "No description"}
                     </p>
                     <p className="text-base md:text-lg font-bold text-accent">
-                      Php {product.price.toFixed(2)}
+                      Php {item.selling_price.toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>

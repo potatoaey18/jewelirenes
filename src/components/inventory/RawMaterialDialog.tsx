@@ -14,7 +14,8 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
     type: "gold",
     quantity_on_hand: "",
     cost_per_unit: "",
-    unit: "grams"
+    unit: "grams",
+    other_description: ""
   });
 
   useEffect(() => {
@@ -25,7 +26,8 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
           type: material.type || "gold",
           quantity_on_hand: material.quantity_on_hand?.toString() || "",
           cost_per_unit: material.cost_per_unit?.toString() || "",
-          unit: material.unit || "grams"
+          unit: material.unit || "grams",
+          other_description: material.other_description || ""
         });
       } else {
         setFormData({
@@ -33,7 +35,8 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
           type: "gold",
           quantity_on_hand: "",
           cost_per_unit: "",
-          unit: "grams"
+          unit: "grams",
+          other_description: ""
         });
       }
     }
@@ -41,6 +44,12 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (formData.type === "other" && !formData.other_description.trim()) {
+      toast.error("Please specify the type of other material");
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -49,7 +58,8 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
         type: formData.type as "gold" | "diamond" | "gem" | "south_sea_pearl" | "other",
         unit: formData.unit,
         quantity_on_hand: parseFloat(formData.quantity_on_hand),
-        cost_per_unit: parseFloat(formData.cost_per_unit)
+        cost_per_unit: parseFloat(formData.cost_per_unit),
+        other_description: formData.type === "other" ? formData.other_description : null
       };
 
       if (material) {
@@ -113,6 +123,18 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
               </SelectContent>
             </Select>
           </div>
+
+          {formData.type === "other" && (
+            <div>
+              <Label>Other Material Description *</Label>
+              <Input
+                value={formData.other_description}
+                onChange={(e) => setFormData({ ...formData, other_description: e.target.value })}
+                placeholder="e.g., Silver, Bronze, Titanium"
+                required
+              />
+            </div>
+          )}
 
           <div>
             <Label>Quantity on Hand</Label>

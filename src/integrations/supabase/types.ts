@@ -556,6 +556,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          other_description: string | null
           quantity_on_hand: number
           type: Database["public"]["Enums"]["material_type"]
           unit: string
@@ -566,6 +567,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          other_description?: string | null
           quantity_on_hand?: number
           type: Database["public"]["Enums"]["material_type"]
           unit: string
@@ -576,6 +578,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          other_description?: string | null
           quantity_on_hand?: number
           type?: Database["public"]["Enums"]["material_type"]
           unit?: string
