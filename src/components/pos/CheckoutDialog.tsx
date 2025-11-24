@@ -163,18 +163,18 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
 
       if (itemsError) throw itemsError;
 
-      // Decrease stock for each product
+      // Decrease stock for each finished item
       for (const item of cart) {
-        const { data: product } = await supabase
-          .from("products")
+        const { data: finishedItem } = await supabase
+          .from("finished_items")
           .select("stock")
           .eq("id", item.id)
           .single();
 
-        if (product) {
-          const newStock = Math.max(0, product.stock - item.quantity);
+        if (finishedItem) {
+          const newStock = Math.max(0, finishedItem.stock - item.quantity);
           const { error: stockError } = await supabase
-            .from("products")
+            .from("finished_items")
             .update({ stock: newStock })
             .eq("id", item.id);
 
