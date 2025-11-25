@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User, Download, Calendar } from "lucide-react";
+import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,12 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
-
-type TimePeriod = "weekly" | "monthly" | "yearly";
-type PurchaseFilter = "all" | "paid" | "unpaid";
 
 const Customers = () => {
   const navigate = useNavigate();
@@ -34,8 +29,6 @@ const Customers = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("monthly");
-  const [purchaseFilter, setPurchaseFilter] = useState<PurchaseFilter>("all");
 
   useEffect(() => {
     fetchCustomers();
@@ -47,8 +40,8 @@ const Customers = () => {
         .from("customers")
         .select(`
           *,
-          transactions(total_amount, created_at),
-          payment_plans(balance, total_amount)
+          transactions(total_amount),
+          payment_plans(balance)
         `)
         .order("created_at", { ascending: false });
 
@@ -113,34 +106,14 @@ const Customers = () => {
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getTimePeriodDate = () => {
-    const now = new Date();
-    const oneWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const oneMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-    const oneYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    
-    switch (timePeriod) {
-      case "weekly": return oneWeek;
-      case "monthly": return oneMonth;
-      case "yearly": return oneYear;
-    }
-  };
-
-  const filterTransactionsByPeriod = (transactions: any[]) => {
-    const periodDate = getTimePeriodDate();
-    return transactions?.filter((t: any) => new Date(t.created_at) >= periodDate) || [];
-  };
-
   const getCustomerStats = (customer: any) => {
-    const filteredTransactions = filterTransactionsByPeriod(customer.transactions || []);
-    
-    const totalSpent = filteredTransactions.reduce(
+    const totalSpent = customer.transactions?.reduce(
       (sum: number, t: any) => sum + parseFloat(t.total_amount || 0),
       0
-    );
-    const purchases = filteredTransactions.length;
+    ) || 0;
     
-    // Calculate unpaid balance from payment plans
+    const purchases = customer.transactions?.length || 0;
+    
     const unpaidBalance = customer.payment_plans?.reduce(
       (sum: number, plan: any) => sum + parseFloat(plan.balance || 0),
       0
@@ -149,17 +122,6 @@ const Customers = () => {
     const paidAmount = totalSpent - unpaidBalance;
     
     return { totalSpent, purchases, paidAmount, unpaidBalance };
-  };
-
-  const filterByPurchaseStatus = (customers: any[]) => {
-    if (purchaseFilter === "all") return customers;
-    
-    return customers.filter(customer => {
-      const { unpaidBalance } = getCustomerStats(customer);
-      if (purchaseFilter === "unpaid") return unpaidBalance > 0;
-      if (purchaseFilter === "paid") return unpaidBalance === 0 && customer.transactions?.length > 0;
-      return true;
-    });
   };
 
   const handleExportImage = async () => {
@@ -175,7 +137,7 @@ const Customers = () => {
       });
       
       const link = document.createElement("a");
-      link.download = `customers-${timePeriod}-${purchaseFilter}-${new Date().toISOString()}.png`;
+      link.download = `customers-${new Date().toISOString()}.png`;
       link.href = canvas.toDataURL();
       link.click();
       
@@ -214,8 +176,8 @@ const Customers = () => {
           </div>
         </div>
 
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-full sm:max-w-md">
+        <div className="mb-6">
+          <div className="relative max-w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search customers..."
@@ -224,29 +186,10 @@ const Customers = () => {
               className="pl-10 h-10 sm:h-12 bg-card border-border/50"
             />
           </div>
-          <Select value={timePeriod} onValueChange={(value: TimePeriod) => setTimePeriod(value)}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Calendar className="mr-2 h-4 w-4" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        <Tabs value={purchaseFilter} onValueChange={(value: PurchaseFilter) => setPurchaseFilter(value)} className="mb-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="all">All Purchases</TabsTrigger>
-            <TabsTrigger value="paid">Paid</TabsTrigger>
-            <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         <div ref={exportRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {filterByPurchaseStatus(filteredCustomers).map((customer) => {
+          {filteredCustomers.map((customer) => {
             const { totalSpent, purchases, paidAmount, unpaidBalance } = getCustomerStats(customer);
             return (
               <Card
@@ -297,14 +240,6 @@ const Customers = () => {
                       <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
                       <p className="text-base sm:text-lg font-bold">{purchases}</p>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Paid</p>
-                    <p className="text-sm sm:text-base font-semibold text-green-600">Php {paidAmount.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Unpaid</p>
-                    <p className="text-sm sm:text-base font-semibold text-red-600">Php {unpaidBalance.toLocaleString()}</p>
                   </div>
                 </div>
 
