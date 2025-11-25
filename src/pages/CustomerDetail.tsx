@@ -1,25 +1,33 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, FileText, Trash2, Plus, Download, Eye } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Trash2, Plus, Download, Eye, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+type TimePeriod = "weekly" | "monthly" | "yearly";
+type PurchaseFilter = "all" | "paid" | "unpaid";
 
 const CustomerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [paymentPlans, setPaymentPlans] = useState<any[]>([]);
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDescription, setUploadDescription] = useState("");
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("monthly");
+  const [purchaseFilter, setPurchaseFilter] = useState<PurchaseFilter>("all");
 
   useEffect(() => {
     fetchCustomerData();
@@ -47,6 +55,14 @@ const CustomerDetail = () => {
 
       if (transError) throw transError;
       setTransactions(transData || []);
+
+      const { data: plansData, error: plansError } = await supabase
+        .from("payment_plans")
+        .select("*")
+        .eq("customer_id", id);
+
+      if (plansError) throw plansError;
+      setPaymentPlans(plansData || []);
 
       const { data: filesData, error: filesError } = await supabase
         .from("customer_files")
@@ -160,10 +176,47 @@ const CustomerDetail = () => {
     return <Badge className={variants[tier] || variants.Silver}>{tier}</Badge>;
   };
 
+  const getTimePeriodDate = () => {
+    const now = new Date();
+    const oneWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    const oneYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    
+    switch (timePeriod) {
+      case "weekly": return oneWeek;
+      case "monthly": return oneMonth;
+      case "yearly": return oneYear;
+    }
+  };
+
+  const filterTransactionsByPeriod = (transactions: any[]) => {
+    const periodDate = getTimePeriodDate();
+    return transactions.filter((t: any) => new Date(t.created_at) >= periodDate);
+  };
+
+  const unpaidBalance = paymentPlans.reduce(
+    (sum: number, plan: any) => sum + parseFloat(plan.balance || 0),
+    0
+  );
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!customer) return <div className="min-h-screen flex items-center justify-center">Customer not found</div>;
 
-  const totalSpent = transactions.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0);
+  const filteredTransactions = filterTransactionsByPeriod(transactions);
+  const displayTransactions = purchaseFilter === "all" 
+    ? filteredTransactions 
+    : purchaseFilter === "paid" 
+    ? filteredTransactions.filter(t => {
+        const hasPlan = paymentPlans.some(p => p.transaction_id === t.id);
+        return !hasPlan || paymentPlans.find(p => p.transaction_id === t.id)?.balance === 0;
+      })
+    : filteredTransactions.filter(t => {
+        const plan = paymentPlans.find(p => p.transaction_id === t.id);
+        return plan && plan.balance > 0;
+      });
+
+  const totalSpent = displayTransactions.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0);
+  const paidAmount = totalSpent - unpaidBalance;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
@@ -224,7 +277,15 @@ const CustomerDetail = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Purchases</p>
-                    <p className="text-3xl font-bold">{transactions.length}</p>
+                    <p className="text-3xl font-bold">{displayTransactions.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Paid</p>
+                    <p className="text-2xl font-bold text-green-600">Php {paidAmount.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Unpaid</p>
+                    <p className="text-2xl font-bold text-red-600">Php {unpaidBalance.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -232,14 +293,36 @@ const CustomerDetail = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Purchase History</CardTitle>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <CardTitle>Purchase History</CardTitle>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Select value={timePeriod} onValueChange={(value: TimePeriod) => setTimePeriod(value)}>
+                      <SelectTrigger className="w-full sm:w-[140px]">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                {transactions.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No transactions yet</p>
+              <CardContent className="space-y-4">
+                <Tabs value={purchaseFilter} onValueChange={(value: PurchaseFilter) => setPurchaseFilter(value)}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="paid">Paid</TabsTrigger>
+                    <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {displayTransactions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No transactions found</p>
                 ) : (
                   <div className="space-y-4">
-                    {transactions.map((transaction) => (
+                    {displayTransactions.map((transaction) => (
                       <div key={transaction.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
