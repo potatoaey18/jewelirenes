@@ -166,7 +166,9 @@ const Customers = () => {
     if (!exportRef.current) return;
     
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default;
+      
       const canvas = await html2canvas(exportRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
