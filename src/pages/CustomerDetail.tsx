@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, FileText, Trash2, Plus, Download, Eye, Calendar } from "lucide-react";
+import { ArrowLeft, FileText, Trash2, Download, Eye, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
+import { TransactionDetailDialog } from "@/components/customers/TransactionDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -28,6 +29,8 @@ const CustomerDetail = () => {
   const [uploadDescription, setUploadDescription] = useState("");
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("monthly");
   const [purchaseFilter, setPurchaseFilter] = useState<PurchaseFilter>("all");
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCustomerData();
@@ -323,7 +326,14 @@ const CustomerDetail = () => {
                 ) : (
                   <div className="space-y-4">
                     {displayTransactions.map((transaction) => (
-                      <div key={transaction.id} className="border rounded-lg p-4">
+                      <div 
+                        key={transaction.id} 
+                        className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => {
+                          setSelectedTransaction(transaction);
+                          setTransactionDialogOpen(true);
+                        }}
+                      >
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <p className="font-medium">{format(new Date(transaction.created_at), "PPP")}</p>
@@ -335,7 +345,7 @@ const CustomerDetail = () => {
                           <div className="mt-2 space-y-1 text-sm">
                             {transaction.transaction_items.map((item: any) => (
                               <p key={item.id} className="text-muted-foreground">
-                                {item.product_name} x {item.quantity} - ${item.subtotal}
+                                {item.product_name} x {item.quantity} - Php {item.subtotal}
                               </p>
                             ))}
                           </div>
@@ -418,6 +428,12 @@ const CustomerDetail = () => {
           </div>
         </div>
       </main>
+
+      <TransactionDetailDialog
+        transaction={selectedTransaction}
+        open={transactionDialogOpen}
+        onOpenChange={setTransactionDialogOpen}
+      />
     </div>
   );
 };
