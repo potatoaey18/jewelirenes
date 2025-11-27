@@ -11,11 +11,12 @@ import autoTable from "jspdf-autotable";
 
 interface TransactionDetailDialogProps {
   transaction: any;
+  customer?: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const TransactionDetailDialog = ({ transaction, open, onOpenChange }: TransactionDetailDialogProps) => {
+export const TransactionDetailDialog = ({ transaction, customer, open, onOpenChange }: TransactionDetailDialogProps) => {
   const [collections, setCollections] = useState<any[]>([]);
   const [paymentPlan, setPaymentPlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -86,15 +87,43 @@ export const TransactionDetailDialog = ({ transaction, open, onOpenChange }: Tra
     doc.setFontSize(18);
     doc.text("Transaction Details", 14, 20);
     
+    let yPos = 30;
+    
+    if (customer) {
+      doc.setFontSize(14);
+      doc.text("Customer Information", 14, yPos);
+      yPos += 8;
+      doc.setFontSize(11);
+      doc.text(`Name: ${customer.name}`, 14, yPos);
+      yPos += 6;
+      if (customer.phone) {
+        doc.text(`Phone: ${customer.phone}`, 14, yPos);
+        yPos += 6;
+      }
+      if (customer.email) {
+        doc.text(`Email: ${customer.email}`, 14, yPos);
+        yPos += 6;
+      }
+      if (customer.address) {
+        doc.text(`Address: ${customer.address}`, 14, yPos);
+        yPos += 6;
+      }
+      yPos += 4;
+    }
+    
     doc.setFontSize(12);
-    doc.text(`Date: ${format(new Date(transaction.created_at), "PPP")}`, 14, 30);
-    doc.text(`Total Amount: Php ${transaction.total_amount}`, 14, 38);
-    doc.text(`Type: ${transaction.transaction_type}`, 14, 46);
-    doc.text(`Payment: ${transaction.payment_type || "N/A"}`, 14, 54);
+    doc.text(`Date: ${format(new Date(transaction.created_at), "PPP")}`, 14, yPos);
+    yPos += 8;
+    doc.text(`Total Amount: Php ${transaction.total_amount}`, 14, yPos);
+    yPos += 8;
+    doc.text(`Type: ${transaction.transaction_type}`, 14, yPos);
+    yPos += 8;
+    doc.text(`Payment: ${transaction.payment_type || "N/A"}`, 14, yPos);
+    yPos += 8;
 
     if (transaction.transaction_items && transaction.transaction_items.length > 0) {
       autoTable(doc, {
-        startY: 62,
+        startY: yPos,
         head: [["Item", "Qty", "Unit Price", "Subtotal"]],
         body: transaction.transaction_items.map((item: any) => [
           item.product_name,
@@ -152,6 +181,36 @@ export const TransactionDetailDialog = ({ transaction, open, onOpenChange }: Tra
         </DialogHeader>
 
         <div ref={contentRef} className="space-y-6 p-4">
+          {customer && (
+            <div className="border-b pb-4">
+              <h4 className="font-semibold mb-3">Customer Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Name</p>
+                  <p className="font-medium">{customer.name}</p>
+                </div>
+                {customer.phone && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="font-medium">{customer.phone}</p>
+                  </div>
+                )}
+                {customer.email && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{customer.email}</p>
+                  </div>
+                )}
+                {customer.address && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p className="font-medium">{customer.address}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Date</p>

@@ -11,6 +11,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
 import { TransactionDetailDialog } from "@/components/customers/TransactionDetailDialog";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -179,6 +181,71 @@ const CustomerDetail = () => {
     return <Badge className={variants[tier] || variants.Silver}>{tier}</Badge>;
   };
 
+  const handleBatchExportPDF = (filter: "all" | "paid" | "unpaid") => {
+    const doc = new jsPDF();
+    
+    let exportTransactions = displayTransactions;
+    let title = "All Transactions";
+    
+    if (filter === "paid") {
+      exportTransactions = displayTransactions.filter(t => {
+        const plan = paymentPlans.find(p => p.transaction_id === t.id);
+        return !plan || plan.balance === 0;
+      });
+      title = "Paid Transactions";
+    } else if (filter === "unpaid") {
+      exportTransactions = displayTransactions.filter(t => {
+        const plan = paymentPlans.find(p => p.transaction_id === t.id);
+        return plan && plan.balance > 0;
+      });
+      title = "Unpaid Transactions";
+    }
+    
+    doc.setFontSize(18);
+    doc.text(title, 14, 20);
+    
+    doc.setFontSize(14);
+    doc.text("Customer Information", 14, 32);
+    doc.setFontSize(11);
+    let yPos = 40;
+    doc.text(`Name: ${customer?.name || "N/A"}`, 14, yPos);
+    yPos += 6;
+    if (customer?.phone) {
+      doc.text(`Phone: ${customer.phone}`, 14, yPos);
+      yPos += 6;
+    }
+    if (customer?.email) {
+      doc.text(`Email: ${customer.email}`, 14, yPos);
+      yPos += 6;
+    }
+    yPos += 8;
+    
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Date", "Type", "Amount", "Status"]],
+      body: exportTransactions.map((transaction: any) => {
+        const plan = paymentPlans.find(p => p.transaction_id === transaction.id);
+        const status = !plan ? "Paid" : plan.balance > 0 ? "Unpaid" : "Paid";
+        return [
+          format(new Date(transaction.created_at), "PP"),
+          transaction.transaction_type,
+          `Php ${transaction.total_amount}`,
+          status,
+        ];
+      }),
+    });
+    
+    const finalY = (doc as any).lastAutoTable?.finalY || yPos + 20;
+    doc.setFontSize(12);
+    doc.text(`Total Transactions: ${exportTransactions.length}`, 14, finalY + 10);
+    
+    const total = exportTransactions.reduce((sum: number, t: any) => sum + Number(t.total_amount), 0);
+    doc.text(`Total Amount: Php ${total}`, 14, finalY + 18);
+    
+    doc.save(`${customer?.name || "customer"}-${filter}-transactions.pdf`);
+    toast.success("PDF exported successfully");
+  };
+
   const getTimePeriodDate = () => {
     const now = new Date();
     const oneWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -314,13 +381,24 @@ const CustomerDetail = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Tabs value={purchaseFilter} onValueChange={(value: PurchaseFilter) => setPurchaseFilter(value)}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="paid">Paid</TabsTrigger>
-                    <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                  <Tabs value={purchaseFilter} onValueChange={(value: PurchaseFilter) => setPurchaseFilter(value)}>
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="all">All</TabsTrigger>
+                      <TabsTrigger value="paid">Paid</TabsTrigger>
+                      <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleBatchExportPDF(purchaseFilter)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export {purchaseFilter === "all" ? "All" : purchaseFilter === "paid" ? "Paid" : "Unpaid"}
+                  </Button>
+                </div>
                 {displayTransactions.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No transactions found</p>
                 ) : (
@@ -431,6 +509,7 @@ const CustomerDetail = () => {
 
       <TransactionDetailDialog
         transaction={selectedTransaction}
+        customer={customer}
         open={transactionDialogOpen}
         onOpenChange={setTransactionDialogOpen}
       />
