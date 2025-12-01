@@ -71,7 +71,7 @@ export default function Collections() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('payment_plans')
-        .select('*, customers(name), transactions(total_amount)')
+        .select('*, customers(name), transactions(total_amount, transaction_items(product_name))')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -83,7 +83,7 @@ export default function Collections() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('collections')
-        .select('*, payment_plans(*, customers(name))')
+        .select('*, payment_plans(*, customers(name), transactions(transaction_items(product_name)))')
         .order('payment_date', { ascending: false });
       if (error) throw error;
       return data;
@@ -318,6 +318,7 @@ export default function Collections() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Customer</TableHead>
+                      <TableHead>Product Names</TableHead>
                       <TableHead>Total Amount</TableHead>
                       <TableHead>Amount Paid</TableHead>
                       <TableHead>Balance</TableHead>
@@ -326,32 +327,36 @@ export default function Collections() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPlans.map((plan) => (
-                      <TableRow key={plan.id}>
-                        <TableCell className="font-medium">{plan.customers?.name}</TableCell>
-                        <TableCell>Php {Number(plan.total_amount).toFixed(2)}</TableCell>
-                        <TableCell>Php {Number(plan.amount_paid).toFixed(2)}</TableCell>
-                        <TableCell>Php {Number(plan.balance).toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'}>
-                            {plan.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {plan.status === 'active' && (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedPlan(plan);
-                                setPaymentDialogOpen(true);
-                              }}
-                            >
-                              Add Payment
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredPlans.map((plan) => {
+                      const productNames = plan.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
+                      return (
+                        <TableRow key={plan.id}>
+                          <TableCell className="font-medium">{plan.customers?.name}</TableCell>
+                          <TableCell>{productNames}</TableCell>
+                          <TableCell>Php {Number(plan.total_amount).toFixed(2)}</TableCell>
+                          <TableCell>Php {Number(plan.amount_paid).toFixed(2)}</TableCell>
+                          <TableCell>Php {Number(plan.balance).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'}>
+                              {plan.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {plan.status === 'active' && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedPlan(plan);
+                                  setPaymentDialogOpen(true);
+                                }}
+                              >
+                                Add Payment
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -366,21 +371,26 @@ export default function Collections() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Customer</TableHead>
+                      <TableHead>Product Names</TableHead>
                       <TableHead>Amount Paid</TableHead>
                       <TableHead>Payment Method</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {collections.map((collection) => (
-                      <TableRow key={collection.id}>
-                        <TableCell>{new Date(collection.payment_date).toLocaleDateString()}</TableCell>
-                        <TableCell>{collection.payment_plans?.customers?.name}</TableCell>
-                        <TableCell className="font-medium">Php {Number(collection.amount_paid).toFixed(2)}</TableCell>
-                        <TableCell>{collection.payment_method}</TableCell>
-                        <TableCell>{collection.notes}</TableCell>
-                      </TableRow>
-                    ))}
+                    {collections.map((collection) => {
+                      const productNames = collection.payment_plans?.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
+                      return (
+                        <TableRow key={collection.id}>
+                          <TableCell>{new Date(collection.payment_date).toLocaleDateString()}</TableCell>
+                          <TableCell>{collection.payment_plans?.customers?.name}</TableCell>
+                          <TableCell>{productNames}</TableCell>
+                          <TableCell className="font-medium">Php {Number(collection.amount_paid).toFixed(2)}</TableCell>
+                          <TableCell>{collection.payment_method}</TableCell>
+                          <TableCell>{collection.notes}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
