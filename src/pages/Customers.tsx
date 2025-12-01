@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User, Download } from "lucide-react";
+import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User, Download, FileText, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,13 +18,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Navigation from "@/components/Navigation";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Customers = () => {
   const navigate = useNavigate();
   const exportRef = useRef<HTMLDivElement>(null);
+  const masterHistoryRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<any[]>([]);
+  const [masterHistory, setMasterHistory] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -32,6 +38,7 @@ const Customers = () => {
 
   useEffect(() => {
     fetchCustomers();
+    fetchMasterHistory();
   }, []);
 
   const fetchCustomers = async () => {
@@ -47,6 +54,34 @@ const Customers = () => {
 
       if (error) throw error;
       setCustomers(data || []);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const fetchMasterHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select(`
+          id,
+          total_amount,
+          discount,
+          created_at,
+          customer_id,
+          customers(name),
+          payment_plans(
+            id,
+            total_amount,
+            amount_paid,
+            balance,
+            collections(amount_paid)
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setMasterHistory(data || []);
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -124,20 +159,91 @@ const Customers = () => {
     return { totalSpent, purchases, paidAmount, unpaidBalance };
   };
 
-  const handleExportImage = async () => {
-    if (!exportRef.current) return;
+  const handleExportCustomersPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Customer Directory", 14, 20);
+    
+    const tableData = filteredCustomers.map((customer) => {
+      const { totalSpent, purchases, unpaidBalance } = getCustomerStats(customer);
+      return [
+        customer.name,
+        customer.email || "-",
+        customer.phone || "-",
+        customer.location || "-",
+        `₱${totalSpent.toLocaleString()}`,
+        purchases.toString(),
+        `₱${unpaidBalance.toLocaleString()}`
+      ];
+    });
+    
+    autoTable(doc, {
+      head: [["Name", "Email", "Phone", "Location", "Total Spent", "Purchases", "Balance"]],
+      body: tableData,
+      startY: 30,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 175, 55] }
+    });
+    
+    doc.save(`customers-${new Date().toISOString()}.pdf`);
+    toast.success("PDF exported successfully");
+  };
+
+  const handleExportMasterHistoryPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Master History - Sales & Collections", 14, 20);
+    
+    const tableData = masterHistory.map((transaction) => {
+      const customerName = transaction.customers?.name || "Unknown";
+      const retailPrice = parseFloat(transaction.total_amount || 0);
+      const discount = parseFloat(transaction.discount || 0);
+      const discountedPrice = discount > 0 ? retailPrice - discount : retailPrice;
+      const paymentPlan = transaction.payment_plans?.[0];
+      const payments = paymentPlan?.collections?.reduce(
+        (sum: number, c: any) => sum + parseFloat(c.amount_paid || 0),
+        0
+      ) || 0;
+      const balance = paymentPlan?.balance || 0;
+      
+      return [
+        customerName,
+        `₱${retailPrice.toLocaleString()}`,
+        discount > 0 ? `₱${discount.toLocaleString()}` : "-",
+        discount > 0 ? `₱${discountedPrice.toLocaleString()}` : "-",
+        `₱${payments.toLocaleString()}`,
+        `₱${balance.toLocaleString()}`
+      ];
+    });
+    
+    autoTable(doc, {
+      head: [["Customer", "Retail Price", "Discount", "Discounted Price", "Payments", "Balance"]],
+      body: tableData,
+      startY: 30,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 175, 55] }
+    });
+    
+    doc.save(`master-history-${new Date().toISOString()}.pdf`);
+    toast.success("PDF exported successfully");
+  };
+
+  const handleExportMasterHistoryImage = async () => {
+    if (!masterHistoryRef.current) return;
     
     try {
       const html2canvasModule = await import("html2canvas");
       const html2canvas = html2canvasModule.default;
       
-      const canvas = await html2canvas(exportRef.current, {
+      const canvas = await html2canvas(masterHistoryRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
       });
       
       const link = document.createElement("a");
-      link.download = `customers-${new Date().toISOString()}.png`;
+      link.download = `master-history-${new Date().toISOString()}.png`;
       link.href = canvas.toDataURL();
       link.click();
       
@@ -154,41 +260,46 @@ const Customers = () => {
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Customer Directory</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Customers</h2>
             <p className="text-sm sm:text-base text-muted-foreground">Manage your client relationships</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              onClick={handleExportImage}
-              variant="outline"
-              className="w-full sm:w-auto"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export Image
-            </Button>
-            <Button
-              onClick={handleAdd}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Customer
-            </Button>
-          </div>
+          <Button
+            onClick={handleAdd}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Customer
+          </Button>
         </div>
 
-        <div className="mb-6">
-          <div className="relative max-w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search customers..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-10 sm:h-12 bg-card border-border/50"
-            />
-          </div>
-        </div>
+        <Tabs defaultValue="directory" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="directory">Customer Directory</TabsTrigger>
+            <TabsTrigger value="history">Master History</TabsTrigger>
+          </TabsList>
 
-        <div ref={exportRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <TabsContent value="directory">
+            <div className="flex justify-between items-center mb-6 gap-4">
+              <div className="relative max-w-full sm:max-w-md flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 h-10 sm:h-12 bg-card border-border/50"
+                />
+              </div>
+              <Button
+                onClick={handleExportCustomersPDF}
+                variant="outline"
+                className="flex-shrink-0"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Export PDF
+              </Button>
+            </div>
+
+            <div ref={exportRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredCustomers.map((customer) => {
             const { totalSpent, purchases, paidAmount, unpaidBalance } = getCustomerStats(customer);
             return (
@@ -264,9 +375,80 @@ const Customers = () => {
                 </div>
               </CardContent>
             </Card>
-            );
-          })}
-        </div>
+              );
+            })}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history">
+            <div className="flex justify-end gap-2 mb-6">
+              <Button
+                onClick={handleExportMasterHistoryImage}
+                variant="outline"
+              >
+                <ImageIcon className="mr-2 h-4 w-4" />
+                Export Image
+              </Button>
+              <Button
+                onClick={handleExportMasterHistoryPDF}
+                variant="outline"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Export PDF
+              </Button>
+            </div>
+
+            <Card>
+              <div ref={masterHistoryRef} className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer Name</TableHead>
+                      <TableHead>Retail Price</TableHead>
+                      <TableHead>Discount</TableHead>
+                      <TableHead>Discounted Price</TableHead>
+                      <TableHead>Payments</TableHead>
+                      <TableHead>Balance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {masterHistory.map((transaction) => {
+                      const customerName = transaction.customers?.name || "Unknown";
+                      const customerId = transaction.customer_id;
+                      const retailPrice = parseFloat(transaction.total_amount || 0);
+                      const discount = parseFloat(transaction.discount || 0);
+                      const discountedPrice = discount > 0 ? retailPrice - discount : null;
+                      const paymentPlan = transaction.payment_plans?.[0];
+                      const payments = paymentPlan?.collections?.reduce(
+                        (sum: number, c: any) => sum + parseFloat(c.amount_paid || 0),
+                        0
+                      ) || 0;
+                      const balance = paymentPlan?.balance || 0;
+
+                      return (
+                        <TableRow key={transaction.id}>
+                          <TableCell>
+                            <button
+                              onClick={() => navigate(`/customers/${customerId}`)}
+                              className="text-accent hover:underline font-medium"
+                            >
+                              {customerName}
+                            </button>
+                          </TableCell>
+                          <TableCell>₱{retailPrice.toLocaleString()}</TableCell>
+                          <TableCell>{discount > 0 ? `₱${discount.toLocaleString()}` : "-"}</TableCell>
+                          <TableCell>{discountedPrice ? `₱${discountedPrice.toLocaleString()}` : "-"}</TableCell>
+                          <TableCell>₱{payments.toLocaleString()}</TableCell>
+                          <TableCell>₱{balance.toLocaleString()}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
 
       <CustomerDialog
