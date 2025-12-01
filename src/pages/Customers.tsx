@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User, Download, FileText, Image as ImageIcon } from "lucide-react";
+import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User, Download, FileText, Image as ImageIcon, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -69,6 +69,7 @@ const Customers = () => {
           discount,
           created_at,
           customer_id,
+          invoice_image_url,
           customers(name),
           transaction_items(product_name),
           payment_plans(
@@ -200,6 +201,7 @@ const Customers = () => {
     const tableData = masterHistory.map((transaction) => {
       const customerName = transaction.customers?.name || "Unknown";
       const productNames = transaction.transaction_items?.map((item: any) => item.product_name).join(", ") || "-";
+      const dateSold = new Date(transaction.created_at).toLocaleDateString();
       const retailPrice = parseFloat(transaction.total_amount || 0);
       const discount = parseFloat(transaction.discount || 0);
       const discountedPrice = discount > 0 ? retailPrice - discount : retailPrice;
@@ -211,6 +213,7 @@ const Customers = () => {
       const balance = paymentPlan?.balance || 0;
       
       return [
+        dateSold,
         customerName,
         productNames,
         `₱${retailPrice.toLocaleString()}`,
@@ -222,7 +225,7 @@ const Customers = () => {
     });
     
     autoTable(doc, {
-      head: [["Customer", "Product Names", "Retail Price", "Discount", "Discounted Price", "Payments", "Balance"]],
+      head: [["Date Sold", "Customer", "Product Names", "Retail Price", "Discount", "Discounted Price", "Payments", "Balance"]],
       body: tableData,
       startY: 30,
       styles: { fontSize: 8 },
@@ -406,6 +409,7 @@ const Customers = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Date Sold</TableHead>
                       <TableHead>Customer Name</TableHead>
                       <TableHead>Product Names</TableHead>
                       <TableHead>Retail Price</TableHead>
@@ -413,6 +417,7 @@ const Customers = () => {
                       <TableHead>Discounted Price</TableHead>
                       <TableHead>Payments</TableHead>
                       <TableHead>Balance</TableHead>
+                      <TableHead>Invoice</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -429,9 +434,11 @@ const Customers = () => {
                         0
                       ) || 0;
                       const balance = paymentPlan?.balance || 0;
+                      const dateSold = new Date(transaction.created_at).toLocaleDateString();
 
                       return (
                         <TableRow key={transaction.id}>
+                          <TableCell>{dateSold}</TableCell>
                           <TableCell>
                             <button
                               onClick={() => navigate(`/customers/${customerId}`)}
@@ -446,6 +453,17 @@ const Customers = () => {
                           <TableCell>{discountedPrice ? `₱${discountedPrice.toLocaleString()}` : "-"}</TableCell>
                           <TableCell>₱{payments.toLocaleString()}</TableCell>
                           <TableCell>₱{balance.toLocaleString()}</TableCell>
+                          <TableCell>
+                            {transaction.invoice_image_url && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(transaction.invoice_image_url, "_blank")}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
