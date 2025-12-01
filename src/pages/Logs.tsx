@@ -166,7 +166,11 @@ export default function Logs() {
                       {Object.entries(selectedLog.old_data).map(([key, value]) => (
                         <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                           <span className="font-medium text-sm min-w-[140px]">{key}:</span>
-                          <span className="text-muted-foreground break-all text-sm">{String(value)}</span>
+                          <span className="text-muted-foreground break-all text-sm">
+                            {key === 'product_names' || key === 'item_name' || key === 'product_name' 
+                              ? String(value) 
+                              : String(value)}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -180,7 +184,11 @@ export default function Logs() {
                       {Object.entries(selectedLog.new_data).map(([key, value]) => (
                         <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                           <span className="font-medium text-sm min-w-[140px]">{key}:</span>
-                          <span className="text-muted-foreground break-all text-sm">{String(value)}</span>
+                          <span className="text-muted-foreground break-all text-sm">
+                            {key === 'product_names' || key === 'item_name' || key === 'product_name' 
+                              ? String(value) 
+                              : String(value)}
+                          </span>
                         </div>
                       ))}
                     </div>

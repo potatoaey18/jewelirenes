@@ -70,6 +70,7 @@ const Customers = () => {
           created_at,
           customer_id,
           customers(name),
+          transaction_items(product_name),
           payment_plans(
             id,
             total_amount,
@@ -198,6 +199,7 @@ const Customers = () => {
     
     const tableData = masterHistory.map((transaction) => {
       const customerName = transaction.customers?.name || "Unknown";
+      const productNames = transaction.transaction_items?.map((item: any) => item.product_name).join(", ") || "-";
       const retailPrice = parseFloat(transaction.total_amount || 0);
       const discount = parseFloat(transaction.discount || 0);
       const discountedPrice = discount > 0 ? retailPrice - discount : retailPrice;
@@ -210,6 +212,7 @@ const Customers = () => {
       
       return [
         customerName,
+        productNames,
         `₱${retailPrice.toLocaleString()}`,
         discount > 0 ? `₱${discount.toLocaleString()}` : "-",
         discount > 0 ? `₱${discountedPrice.toLocaleString()}` : "-",
@@ -219,7 +222,7 @@ const Customers = () => {
     });
     
     autoTable(doc, {
-      head: [["Customer", "Retail Price", "Discount", "Discounted Price", "Payments", "Balance"]],
+      head: [["Customer", "Product Names", "Retail Price", "Discount", "Discounted Price", "Payments", "Balance"]],
       body: tableData,
       startY: 30,
       styles: { fontSize: 8 },
@@ -404,6 +407,7 @@ const Customers = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Customer Name</TableHead>
+                      <TableHead>Product Names</TableHead>
                       <TableHead>Retail Price</TableHead>
                       <TableHead>Discount</TableHead>
                       <TableHead>Discounted Price</TableHead>
@@ -415,6 +419,7 @@ const Customers = () => {
                     {masterHistory.map((transaction) => {
                       const customerName = transaction.customers?.name || "Unknown";
                       const customerId = transaction.customer_id;
+                      const productNames = transaction.transaction_items?.map((item: any) => item.product_name).join(", ") || "-";
                       const retailPrice = parseFloat(transaction.total_amount || 0);
                       const discount = parseFloat(transaction.discount || 0);
                       const discountedPrice = discount > 0 ? retailPrice - discount : null;
@@ -435,6 +440,7 @@ const Customers = () => {
                               {customerName}
                             </button>
                           </TableCell>
+                          <TableCell>{productNames}</TableCell>
                           <TableCell>₱{retailPrice.toLocaleString()}</TableCell>
                           <TableCell>{discount > 0 ? `₱${discount.toLocaleString()}` : "-"}</TableCell>
                           <TableCell>{discountedPrice ? `₱${discountedPrice.toLocaleString()}` : "-"}</TableCell>
