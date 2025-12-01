@@ -369,7 +369,7 @@ export default function Collections() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
+                      <TableHead>Payment Date</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Product Names</TableHead>
                       <TableHead>Amount Paid</TableHead>

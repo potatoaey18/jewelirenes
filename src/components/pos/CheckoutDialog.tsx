@@ -38,6 +38,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
   const [showNewCustomerInput, setShowNewCustomerInput] = useState(false);
   const [paymentType, setPaymentType] = useState("");
   const [taxPercentage, setTaxPercentage] = useState("10");
+  const [discount, setDiscount] = useState("0");
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [invoicePreview, setInvoicePreview] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -128,8 +129,9 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
 
       // Calculate tax and total
       const subtotal = total;
-      const tax = subtotal * (parseFloat(taxPercentage) / 100);
-      const totalAmount = subtotal + tax;
+      const discountAmount = parseFloat(discount) || 0;
+      const tax = (subtotal - discountAmount) * (parseFloat(taxPercentage) / 100);
+      const totalAmount = subtotal - discountAmount + tax;
 
       // Create transaction
       const { data: transaction, error: transactionError } = await supabase
@@ -139,6 +141,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
           transaction_type: "sale",
           payment_type: paymentType,
           tax,
+          discount: discountAmount,
           total_amount: totalAmount,
           invoice_image_url: invoiceUrl,
         })
@@ -200,6 +203,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       setShowNewCustomerInput(false);
       setPaymentType("");
       setTaxPercentage("10");
+      setDiscount("0");
       setInvoiceFile(null);
       setInvoicePreview(null);
     } catch (error: any) {
@@ -326,6 +330,20 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                 value={taxPercentage}
                 onChange={(e) => setTaxPercentage(e.target.value)}
                 placeholder="Enter tax percentage"
+              />
+            </div>
+
+            {/* Discount */}
+            <div className="space-y-2">
+              <Label htmlFor="discount">Discount (Php)</Label>
+              <Input
+                id="discount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                placeholder="Enter discount amount"
               />
             </div>
 
