@@ -129,7 +129,8 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
 
       // Calculate tax and total
       const subtotal = total;
-      const discountAmount = parseFloat(discount) || 0;
+      const discountPercentage = parseFloat(discount) || 0;
+      const discountAmount = subtotal * (discountPercentage / 100);
       const tax = (subtotal - discountAmount) * (parseFloat(taxPercentage) / 100);
       const totalAmount = subtotal - discountAmount + tax;
 
@@ -335,15 +336,16 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
 
             {/* Discount */}
             <div className="space-y-2">
-              <Label htmlFor="discount">Discount (Php)</Label>
+              <Label htmlFor="discount">Discount (%)</Label>
               <Input
                 id="discount"
                 type="number"
                 min="0"
+                max="100"
                 step="0.01"
                 value={discount}
                 onChange={(e) => setDiscount(e.target.value)}
-                placeholder="Enter discount amount"
+                placeholder="Enter discount percentage"
               />
             </div>
 
@@ -425,13 +427,19 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                 <span>Subtotal</span>
                 <span>Php {total.toLocaleString()}</span>
               </div>
+              {parseFloat(discount) > 0 && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Discount ({discount}%)</span>
+                  <span>- Php {(total * (parseFloat(discount) / 100)).toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Tax ({taxPercentage}%)</span>
-                <span>Php {(total * (parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
+                <span>Php {((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-accent border-t border-border pt-2">
                 <span>Total</span>
-                <span>Php {(total * (1 + parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
+                <span>Php {(total - (total * (parseFloat(discount) / 100)) + ((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100))).toLocaleString()}</span>
               </div>
             </div>
           </div>
