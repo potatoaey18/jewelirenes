@@ -27,6 +27,7 @@ const CustomerDetail = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [paymentPlans, setPaymentPlans] = useState<any[]>([]);
   const [files, setFiles] = useState<any[]>([]);
+  const [bankChecks, setBankChecks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDescription, setUploadDescription] = useState("");
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("monthly");
@@ -80,6 +81,15 @@ const CustomerDetail = () => {
 
       if (filesError) throw filesError;
       setFiles(filesData || []);
+
+      const { data: checksData, error: checksError } = await supabase
+        .from("bank_checks")
+        .select("*")
+        .eq("customer_id", id)
+        .order("date_received", { ascending: false });
+
+      if (checksError) throw checksError;
+      setBankChecks(checksData || []);
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -501,6 +511,66 @@ const CustomerDetail = () => {
                     ))
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Bank Checks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {bankChecks.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No bank checks found</p>
+                ) : (
+                  <div className="space-y-4">
+                    {bankChecks.map((check) => (
+                      <div key={check.id} className="border rounded-lg p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Bank</p>
+                            <p className="font-medium">{check.bank}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Branch</p>
+                            <p className="font-medium">{check.branch}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Check Number</p>
+                            <p className="font-medium">{check.check_number}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Invoice Number</p>
+                            <p className="font-medium">{check.invoice_number}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Amount</p>
+                            <p className="font-bold text-accent">Php {Number(check.amount).toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Check Date</p>
+                            <p className="font-medium">{format(new Date(check.check_date), "PPP")}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Date Received</p>
+                            <p className="font-medium">{format(new Date(check.date_received), "PPP")}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Expiry Date</p>
+                            <p className="font-medium">
+                              {check.expiry_date ? format(new Date(check.expiry_date), "PPP") : "Not Set"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Status</p>
+                            <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'} className="mt-1">
+                              {check.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

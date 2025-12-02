@@ -50,6 +50,65 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_checks: {
+        Row: {
+          amount: number
+          bank: string
+          branch: string
+          check_date: string
+          check_number: string
+          created_at: string
+          created_by: string
+          customer_id: string
+          date_received: string
+          expiry_date: string | null
+          id: string
+          invoice_number: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank: string
+          branch: string
+          check_date: string
+          check_number: string
+          created_at?: string
+          created_by: string
+          customer_id: string
+          date_received?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank?: string
+          branch?: string
+          check_date?: string
+          check_number?: string
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          date_received?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_checks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collections: {
         Row: {
           amount_paid: number

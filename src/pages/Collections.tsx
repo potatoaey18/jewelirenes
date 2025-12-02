@@ -16,14 +16,18 @@ import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import { BankCheckDialog } from '@/components/collections/BankCheckDialog';
+import { format } from 'date-fns';
 
 export default function Collections() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [bankCheckDialogOpen, setBankCheckDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [bankCheckSearch, setBankCheckSearch] = useState('');
   
   const [planFormData, setPlanFormData] = useState({
     customer_id: '',
@@ -85,6 +89,18 @@ export default function Collections() {
         .from('collections')
         .select('*, payment_plans(*, customers(name), transactions(transaction_items(product_name)))')
         .order('payment_date', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: bankChecks = [] } = useQuery({
+    queryKey: ['bank_checks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_checks')
+        .select('*, customers(name)')
+        .order('date_received', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -178,8 +194,30 @@ export default function Collections() {
     }
   };
 
+  const createBankCheck = useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await supabase
+        .from('bank_checks')
+        .insert([{ ...data, created_by: user?.id }]);
+      
+      if (error) throw error;
+      await createAuditLog('CREATE', 'bank_checks', undefined, undefined, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bank_checks'] });
+      toast.success('Bank check added successfully');
+      setBankCheckDialogOpen(false);
+    }
+  });
+
   const filteredPlans = paymentPlans.filter(plan =>
     plan.customers?.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredBankChecks = bankChecks.filter(check =>
+    check.customers?.name?.toLowerCase().includes(bankCheckSearch.toLowerCase()) ||
+    check.bank?.toLowerCase().includes(bankCheckSearch.toLowerCase()) ||
+    check.check_number?.toLowerCase().includes(bankCheckSearch.toLowerCase())
   );
 
   return (
@@ -297,6 +335,7 @@ export default function Collections() {
           <TabsList>
             <TabsTrigger value="plans">Payment Plans</TabsTrigger>
             <TabsTrigger value="payments">Payment History</TabsTrigger>
+            <TabsTrigger value="checks">Bank Checks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="plans">
@@ -396,7 +435,73 @@ export default function Collections() {
               </div>
             </Card>
           </TabsContent>
+
+          <TabsContent value="checks">
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search by customer, bank, or check number..."
+                    value={bankCheckSearch}
+                    onChange={(e) => setBankCheckSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button onClick={() => setBankCheckDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Bank Check
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Bank</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Check Date</TableHead>
+                      <TableHead>Check Number</TableHead>
+                      <TableHead>Invoice Number</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date Received</TableHead>
+                      <TableHead>Expiry Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBankChecks.map((check) => (
+                      <TableRow key={check.id}>
+                        <TableCell className="font-medium">{check.customers?.name}</TableCell>
+                        <TableCell>{check.bank}</TableCell>
+                        <TableCell>{check.branch}</TableCell>
+                        <TableCell>{format(new Date(check.check_date), 'PP')}</TableCell>
+                        <TableCell>{check.check_number}</TableCell>
+                        <TableCell>{check.invoice_number}</TableCell>
+                        <TableCell>Php {Number(check.amount).toFixed(2)}</TableCell>
+                        <TableCell>{format(new Date(check.date_received), 'PP')}</TableCell>
+                        <TableCell>{check.expiry_date ? format(new Date(check.expiry_date), 'PP') : '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'}>
+                            {check.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        <BankCheckDialog
+          open={bankCheckDialogOpen}
+          onOpenChange={setBankCheckDialogOpen}
+          customers={customers}
+          onSubmit={(data) => createBankCheck.mutate(data)}
+        />
 
         <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
           <DialogContent>
