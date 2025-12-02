@@ -109,11 +109,6 @@ const Sales = () => {
     item.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const TAX_RATE = 0.12;
-  const subtotal = total;
-  const tax = subtotal * TAX_RATE;
-  const grandTotal = subtotal + tax;
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -222,17 +217,9 @@ const Sales = () => {
                     </div>
 
                     <div className="space-y-2 pt-3 md:pt-4 border-t">
-                      <div className="flex justify-between text-sm md:text-base">
-                        <span>Subtotal:</span>
-                        <span className="font-medium">Php {subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm md:text-base">
-                        <span>Tax (12%):</span>
-                        <span className="font-medium">Php {tax.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-base md:text-lg font-bold pt-2 border-t">
+                      <div className="flex justify-between text-base md:text-lg font-bold">
                         <span>Total:</span>
-                        <span className="text-accent">Php {grandTotal.toFixed(2)}</span>
+                        <span className="text-accent">Php {total.toFixed(2)}</span>
                       </div>
                     </div>
 
@@ -256,7 +243,7 @@ const Sales = () => {
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         cart={cart}
-        total={grandTotal}
+        total={total}
         onSuccess={handleCheckoutSuccess}
       />
     </div>
