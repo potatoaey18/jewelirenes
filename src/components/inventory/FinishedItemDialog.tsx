@@ -24,6 +24,7 @@ interface Labor {
   pieces?: number;
   amountPerPiece?: number;
   fixedCost?: number;
+  staffMember?: string;
 }
 
 export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any) {
@@ -114,7 +115,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     const material = rawMaterials.find(m => m.id === mat.material_id);
     if (!material) return 0;
 
-    if (material.type === "gold") {
+    if (material.type === "gold" || material.type === "silver") {
       return (mat.quantity || 0) * (mat.amountPerUnit || 0);
     } else if (material.type === "diamond") {
       return (mat.carat || 0) * (mat.amountPerUnit || 0) * (mat.pieces || 1);
@@ -275,7 +276,8 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           pieces: lab.pieces,
           amount_per_piece: lab.amountPerPiece,
           fixed_cost: lab.fixedCost,
-          total_cost: calculateLaborCost(lab)
+          total_cost: calculateLaborCost(lab),
+          staff_member: lab.staffMember
         });
       }
 
@@ -328,7 +330,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
               />
             </div>
             <div>
-              <Label>Selling Price (Php)</Label>
+              <Label>Selling Price (₱)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -397,7 +399,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                         </Select>
                       </div>
 
-                      {materialType === "gold" && (
+                      {(materialType === "gold" || materialType === "silver") && (
                         <>
                           <div>
                             <Label>Grams</Label>
@@ -409,7 +411,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             />
                           </div>
                           <div>
-                            <Label>Amount per Gram (Php)</Label>
+                            <Label>Amount per Gram (₱)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -419,7 +421,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           </div>
                           <div>
                             <Label>Total</Label>
-                            <Input value={`Php ${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
                           </div>
                         </>
                       )}
@@ -444,7 +446,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             />
                           </div>
                           <div>
-                            <Label>Amount per Carat (Php)</Label>
+                            <Label>Amount per Carat (₱)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -454,7 +456,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           </div>
                           <div>
                             <Label>Total</Label>
-                            <Input value={`Php ${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
                           </div>
                         </>
                       )}
@@ -479,7 +481,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             />
                           </div>
                           <div>
-                            <Label>Amount per {materialType === "gem" ? "Carat" : "Size"} (Php)</Label>
+                            <Label>Amount per {materialType === "gem" ? "Carat" : "Size"} (₱)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -489,7 +491,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           </div>
                           <div>
                             <Label>Total</Label>
-                            <Input value={`Php ${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
                           </div>
                         </>
                       )}
@@ -542,7 +544,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           />
                         </div>
                         <div>
-                          <Label>Amount per Piece (Php)</Label>
+                          <Label>Amount per Piece (₱)</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -550,12 +552,20 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             onChange={(e) => updateLabor(index, "amountPerPiece", parseFloat(e.target.value))}
                           />
                         </div>
+                        <div>
+                          <Label>Staff Member</Label>
+                          <Input
+                            placeholder="Name of staff who performed service"
+                            value={lab.staffMember || ""}
+                            onChange={(e) => updateLabor(index, "staffMember", e.target.value)}
+                          />
+                        </div>
                       </>
                     )}
 
                     {lab.type === "tubog" && (
                       <div>
-                        <Label>Fixed Cost (Php)</Label>
+                        <Label>Fixed Cost (₱)</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -567,7 +577,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
                     <div>
                       <Label>Total</Label>
-                      <Input value={`Php ${calculateLaborCost(lab).toFixed(2)}`} disabled />
+                      <Input value={`₱${calculateLaborCost(lab).toFixed(2)}`} disabled />
                     </div>
                   </div>
                   <Button type="button" size="sm" variant="ghost" onClick={() => removeLabor(index)}>
@@ -581,7 +591,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           <div className="border-t pt-4">
             <div className="flex justify-between text-lg font-bold">
               <span>Total Cost:</span>
-              <span>Php {calculateTotalCost().toFixed(2)}</span>
+              <span>₱{calculateTotalCost().toFixed(2)}</span>
             </div>
           </div>
 

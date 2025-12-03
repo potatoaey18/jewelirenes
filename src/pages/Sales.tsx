@@ -156,7 +156,7 @@ const Sales = () => {
                       {item.description || "No description"}
                     </p>
                     <p className="text-base md:text-lg font-bold text-accent">
-                      Php {item.selling_price.toFixed(2)}
+                      ₱{item.selling_price.toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>
@@ -180,7 +180,7 @@ const Sales = () => {
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm md:text-base truncate">{item.name}</p>
                             <p className="text-xs md:text-sm text-muted-foreground">
-                              Php {item.price.toFixed(2)} each
+                              ₱{item.price.toFixed(2)} each
                             </p>
                           </div>
                           <div className="flex items-center gap-1 md:gap-2">

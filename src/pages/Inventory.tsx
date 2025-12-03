@@ -62,8 +62,8 @@ export default function Inventory() {
         new Date(item.date_manufactured).toLocaleDateString(),
         item.sku,
         item.name,
-        `Php ${Number(item.total_cost).toFixed(2)}`,
-        `Php ${Number(item.selling_price).toFixed(2)}`,
+        `₱${Number(item.total_cost).toFixed(2)}`,
+        `₱${Number(item.selling_price).toFixed(2)}`,
         item.stock.toString()
       ]) || [];
 
@@ -100,7 +100,7 @@ export default function Inventory() {
         material.name,
         material.type,
         `${Number(material.quantity_on_hand).toFixed(2)} ${material.unit}`,
-        `Php ${Number(material.cost_per_unit).toFixed(2)}`
+        `₱${Number(material.cost_per_unit).toFixed(2)}`
       ]) || [];
 
       autoTable(doc, {

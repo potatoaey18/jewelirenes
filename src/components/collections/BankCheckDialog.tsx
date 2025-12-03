@@ -112,7 +112,7 @@ export function BankCheckDialog({ open, onOpenChange, customers, onSubmit, initi
             </div>
 
             <div>
-              <Label htmlFor="amount">Amount (Php) *</Label>
+              <Label htmlFor="amount">Amount (₱) *</Label>
               <Input
                 id="amount"
                 type="number"

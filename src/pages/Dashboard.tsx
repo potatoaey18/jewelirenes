@@ -186,7 +186,7 @@ const Dashboard = () => {
   const statsData = [
     {
       title: "Today's Sales",
-      value: `Php ${stats.todaySales.toLocaleString()}`,
+      value: `₱${stats.todaySales.toLocaleString()}`,
       icon: DollarSign,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -210,7 +210,7 @@ const Dashboard = () => {
     },
     {
       title: "Revenue",
-      value: `Php ${stats.totalRevenue.toLocaleString()}`,
+      value: `₱${stats.totalRevenue.toLocaleString()}`,
       icon: TrendingUp,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -218,7 +218,7 @@ const Dashboard = () => {
     },
     {
       title: "Expenses",
-      value: `Php ${stats.totalExpenses.toLocaleString()}`,
+      value: `₱${stats.totalExpenses.toLocaleString()}`,
       icon: Receipt,
       trend: "",
       bgGradient: "from-destructive/20 to-destructive/5",
@@ -281,7 +281,7 @@ const Dashboard = () => {
                         <p className="font-medium text-sm sm:text-base">{productName}</p>
                       </div>
                       <div className="text-left sm:text-right w-full sm:w-auto">
-                        <p className="font-bold text-accent text-sm sm:text-base">Php {Number(sale.total_amount).toLocaleString()}</p>
+                        <p className="font-bold text-accent text-sm sm:text-base">₱{Number(sale.total_amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">{timeAgo}</p>
                       </div>
                     </div>
