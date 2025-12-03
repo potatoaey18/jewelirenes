@@ -410,11 +410,11 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                     <div className="flex-1">
                       <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {item.quantity} × Php {item.price}
+                        {item.quantity} × ₱{item.price}
                       </p>
                     </div>
                     <p className="font-semibold text-accent">
-                      Php {(item.price * item.quantity).toLocaleString()}
+                      ₱{(item.price * item.quantity).toLocaleString()}
                     </p>
                   </div>
                 ))}
@@ -425,21 +425,21 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
             <div className="border-t border-border pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>Php {total.toLocaleString()}</span>
+                <span>₱{total.toLocaleString()}</span>
               </div>
               {parseFloat(discount) > 0 && (
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Discount ({discount}%)</span>
-                  <span>- Php {(total * (parseFloat(discount) / 100)).toLocaleString()}</span>
+                  <span>-₱{(total * (parseFloat(discount) / 100)).toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Tax ({taxPercentage}%)</span>
-                <span>Php {((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
+                <span>₱{((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-accent border-t border-border pt-2">
                 <span>Total</span>
-                <span>Php {(total - (total * (parseFloat(discount) / 100)) + ((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100))).toLocaleString()}</span>
+                <span>₱{(total - (total * (parseFloat(discount) / 100)) + ((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100))).toLocaleString()}</span>
               </div>
             </div>
           </div>

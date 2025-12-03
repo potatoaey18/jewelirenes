@@ -166,7 +166,7 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
           </div>
 
           <div>
-            <Label>Cost per Unit (Php)</Label>
+            <Label>Cost per Unit (₱)</Label>
             <Input
               type="number"
               step="0.01"

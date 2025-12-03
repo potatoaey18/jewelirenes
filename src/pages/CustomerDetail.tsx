@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
 import { TransactionDetailDialog } from "@/components/customers/TransactionDetailDialog";
+import { BankCheckDetailDialog } from "@/components/customers/BankCheckDetailDialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,8 @@ const CustomerDetail = () => {
   const [purchaseFilter, setPurchaseFilter] = useState<PurchaseFilter>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [selectedBankCheck, setSelectedBankCheck] = useState<any>(null);
+  const [bankCheckDialogOpen, setBankCheckDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCustomerData();
@@ -239,7 +242,7 @@ const CustomerDetail = () => {
         return [
           format(new Date(transaction.created_at), "PP"),
           transaction.transaction_type,
-          `Php ${transaction.total_amount}`,
+          `₱${transaction.total_amount}`,
           status,
         ];
       }),
@@ -250,7 +253,7 @@ const CustomerDetail = () => {
     doc.text(`Total Transactions: ${exportTransactions.length}`, 14, finalY + 10);
     
     const total = exportTransactions.reduce((sum: number, t: any) => sum + Number(t.total_amount), 0);
-    doc.text(`Total Amount: Php ${total}`, 14, finalY + 18);
+    doc.text(`Total Amount: ₱${total}`, 14, finalY + 18);
     
     doc.save(`${customer?.name || "customer"}-${filter}-transactions.pdf`);
     toast.success("PDF exported successfully");
@@ -353,7 +356,7 @@ const CustomerDetail = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Spent</p>
-                    <p className="text-3xl font-bold text-accent">Php {totalSpent.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-accent">₱{totalSpent.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Purchases</p>
@@ -361,11 +364,11 @@ const CustomerDetail = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Paid</p>
-                    <p className="text-2xl font-bold text-green-600">Php {paidAmount.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-600">₱{paidAmount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Unpaid</p>
-                    <p className="text-2xl font-bold text-red-600">Php {unpaidBalance.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-red-600">₱{unpaidBalance.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -427,13 +430,13 @@ const CustomerDetail = () => {
                             <p className="font-medium">{format(new Date(transaction.created_at), "PPP")}</p>
                             <Badge className="mt-1">{transaction.transaction_type}</Badge>
                           </div>
-                          <p className="text-xl font-bold text-accent">Php {transaction.total_amount}</p>
+                          <p className="text-xl font-bold text-accent">₱{transaction.total_amount}</p>
                         </div>
                         {transaction.transaction_items && transaction.transaction_items.length > 0 && (
                           <div className="mt-2 space-y-1 text-sm">
                             {transaction.transaction_items.map((item: any) => (
                               <p key={item.id} className="text-muted-foreground">
-                                {item.product_name} x {item.quantity} - Php {item.subtotal}
+                                {item.product_name} x {item.quantity} - ₱{item.subtotal}
                               </p>
                             ))}
                           </div>
@@ -522,50 +525,27 @@ const CustomerDetail = () => {
                 {bankChecks.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No bank checks found</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {bankChecks.map((check) => (
-                      <div key={check.id} className="border rounded-lg p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div 
+                        key={check.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => {
+                          setSelectedBankCheck(check);
+                          setBankCheckDialogOpen(true);
+                        }}
+                      >
+                        <div className="flex items-center gap-4">
                           <div>
-                            <p className="text-muted-foreground">Bank</p>
-                            <p className="font-medium">{check.bank}</p>
+                            <p className="font-medium">{check.bank} - {check.branch}</p>
+                            <p className="text-sm text-muted-foreground">Check #{check.check_number}</p>
                           </div>
-                          <div>
-                            <p className="text-muted-foreground">Branch</p>
-                            <p className="font-medium">{check.branch}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Check Number</p>
-                            <p className="font-medium">{check.check_number}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Invoice Number</p>
-                            <p className="font-medium">{check.invoice_number}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Amount</p>
-                            <p className="font-bold text-accent">Php {Number(check.amount).toFixed(2)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Check Date</p>
-                            <p className="font-medium">{format(new Date(check.check_date), "PPP")}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Date Received</p>
-                            <p className="font-medium">{format(new Date(check.date_received), "PPP")}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Expiry Date</p>
-                            <p className="font-medium">
-                              {check.expiry_date ? format(new Date(check.expiry_date), "PPP") : "Not Set"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Status</p>
-                            <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'} className="mt-1">
-                              {check.status}
-                            </Badge>
-                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-accent">₱{Number(check.amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'} className="mt-1">
+                            {check.status}
+                          </Badge>
                         </div>
                       </div>
                     ))}
@@ -582,6 +562,12 @@ const CustomerDetail = () => {
         customer={customer}
         open={transactionDialogOpen}
         onOpenChange={setTransactionDialogOpen}
+      />
+
+      <BankCheckDetailDialog
+        check={selectedBankCheck}
+        open={bankCheckDialogOpen}
+        onOpenChange={setBankCheckDialogOpen}
       />
     </div>
   );

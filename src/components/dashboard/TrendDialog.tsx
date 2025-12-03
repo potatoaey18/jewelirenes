@@ -17,7 +17,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick 
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{format(new Date(dataPoint.date), "MMM dd, yyyy")}</p>
-          <p className="text-accent font-bold">Php {dataPoint.value.toLocaleString()}</p>
+          <p className="text-accent font-bold">₱{dataPoint.value.toLocaleString()}</p>
           {dataPoint.details && (
             <p className="text-xs text-muted-foreground mt-1">Click to view details</p>
           )}
@@ -44,7 +44,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick 
                 className="text-xs"
               />
               <YAxis 
-                tickFormatter={(value) => `Php ${value.toLocaleString()}`}
+                tickFormatter={(value) => `₱${value.toLocaleString()}`}
                 className="text-xs"
               />
               <Tooltip content={<CustomTooltip />} />

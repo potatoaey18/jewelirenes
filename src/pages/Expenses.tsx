@@ -104,7 +104,7 @@ export default function Expenses() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="amount" className="text-base font-semibold mb-2 block">Amount (Php)</Label>
+                    <Label htmlFor="amount" className="text-base font-semibold mb-2 block">Amount (₱)</Label>
                     <Input
                       id="amount"
                       type="number"
@@ -196,7 +196,7 @@ export default function Expenses() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-base text-muted-foreground mb-2">Total Expenses</p>
-              <p className="text-4xl sm:text-5xl font-bold">Php {totalExpenses.toFixed(2)}</p>
+              <p className="text-4xl sm:text-5xl font-bold">₱{totalExpenses.toFixed(2)}</p>
             </div>
           </div>
         </Card>
@@ -234,7 +234,7 @@ export default function Expenses() {
                     <TableCell className="py-4">{expense.category}</TableCell>
                     <TableCell className="py-4">{expense.vendor}</TableCell>
                     <TableCell className="py-4">{expense.payment_method}</TableCell>
-                    <TableCell className="text-right font-semibold py-4 text-lg">Php {Number(expense.amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold py-4 text-lg">₱{Number(expense.amount).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -400,6 +400,7 @@ export type Database = {
           item_id: string
           labor_type: Database["public"]["Enums"]["labor_type"]
           pieces: number | null
+          staff_member: string | null
           total_cost: number
         }
         Insert: {
@@ -410,6 +411,7 @@ export type Database = {
           item_id: string
           labor_type: Database["public"]["Enums"]["labor_type"]
           pieces?: number | null
+          staff_member?: string | null
           total_cost: number
         }
         Update: {
@@ -420,6 +422,7 @@ export type Database = {
           item_id?: string
           labor_type?: Database["public"]["Enums"]["labor_type"]
           pieces?: number | null
+          staff_member?: string | null
           total_cost?: number
         }
         Relationships: [
@@ -774,7 +777,13 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       labor_type: "diamond_setting" | "tubog"
-      material_type: "gold" | "diamond" | "gem" | "south_sea_pearl" | "other"
+      material_type:
+        | "gold"
+        | "diamond"
+        | "gem"
+        | "south_sea_pearl"
+        | "other"
+        | "silver"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -904,7 +913,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       labor_type: ["diamond_setting", "tubog"],
-      material_type: ["gold", "diamond", "gem", "south_sea_pearl", "other"],
+      material_type: [
+        "gold",
+        "diamond",
+        "gem",
+        "south_sea_pearl",
+        "other",
+        "silver",
+      ],
     },
   },
 } as const
