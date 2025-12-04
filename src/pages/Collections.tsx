@@ -17,6 +17,8 @@ import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { BankCheckDialog } from '@/components/collections/BankCheckDialog';
+import { BankCheckBookView } from '@/components/collections/BankCheckBookView';
+import { BankCheckDetailDialog } from '@/components/customers/BankCheckDetailDialog';
 import { format } from 'date-fns';
 
 export default function Collections() {
@@ -25,9 +27,10 @@ export default function Collections() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [bankCheckDialogOpen, setBankCheckDialogOpen] = useState(false);
+  const [bankCheckDetailOpen, setBankCheckDetailOpen] = useState(false);
+  const [selectedBankCheck, setSelectedBankCheck] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [search, setSearch] = useState('');
-  const [bankCheckSearch, setBankCheckSearch] = useState('');
   
   const [planFormData, setPlanFormData] = useState({
     customer_id: '',
@@ -212,12 +215,6 @@ export default function Collections() {
 
   const filteredPlans = paymentPlans.filter(plan =>
     plan.customers?.name?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredBankChecks = bankChecks.filter(check =>
-    check.customers?.name?.toLowerCase().includes(bankCheckSearch.toLowerCase()) ||
-    check.bank?.toLowerCase().includes(bankCheckSearch.toLowerCase()) ||
-    check.check_number?.toLowerCase().includes(bankCheckSearch.toLowerCase())
   );
 
   return (
@@ -438,60 +435,22 @@ export default function Collections() {
 
           <TabsContent value="checks">
             <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search by customer, bank, or check number..."
-                    value={bankCheckSearch}
-                    onChange={(e) => setBankCheckSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+              <div className="flex justify-end mb-4">
                 <Button onClick={() => setBankCheckDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Bank Check
                 </Button>
               </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Bank</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Check Date</TableHead>
-                      <TableHead>Check Number</TableHead>
-                      <TableHead>Invoice Number</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date Received</TableHead>
-                      <TableHead>Expiry Date</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBankChecks.map((check) => (
-                      <TableRow key={check.id}>
-                        <TableCell className="font-medium">{check.customers?.name}</TableCell>
-                        <TableCell>{check.bank}</TableCell>
-                        <TableCell>{check.branch}</TableCell>
-                        <TableCell>{format(new Date(check.check_date), 'PP')}</TableCell>
-                        <TableCell>{check.check_number}</TableCell>
-                        <TableCell>{check.invoice_number}</TableCell>
-                        <TableCell>₱{Number(check.amount).toFixed(2)}</TableCell>
-                        <TableCell>{format(new Date(check.date_received), 'PP')}</TableCell>
-                        <TableCell>{check.expiry_date ? format(new Date(check.expiry_date), 'PP') : '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'}>
-                            {check.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <BankCheckBookView
+                checks={bankChecks}
+                customers={customers}
+                showCustomerFilter={true}
+                onCheckClick={(check) => {
+                  setSelectedBankCheck(check);
+                  setBankCheckDetailOpen(true);
+                }}
+              />
             </Card>
           </TabsContent>
         </Tabs>
@@ -501,6 +460,12 @@ export default function Collections() {
           onOpenChange={setBankCheckDialogOpen}
           customers={customers}
           onSubmit={(data) => createBankCheck.mutate(data)}
+        />
+
+        <BankCheckDetailDialog
+          open={bankCheckDetailOpen}
+          onOpenChange={setBankCheckDetailOpen}
+          check={selectedBankCheck}
         />
 
         <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>

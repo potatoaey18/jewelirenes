@@ -97,6 +97,7 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
   const getMaterialTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       gold: "Gold",
+      silver: "Silver",
       diamond: "Diamond",
       gem: "Gem",
       south_sea_pearl: "South Sea Pearl",
@@ -130,7 +131,7 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
                 </div>
                 <div>
                   <p className="text-muted-foreground">Cost per Unit</p>
-                  <p className="font-semibold">Php {Number(material.cost_per_unit).toFixed(2)}</p>
+                  <p className="font-semibold">₱{Number(material.cost_per_unit).toLocaleString()}</p>
                 </div>
               </div>
               <div className="flex gap-2">
