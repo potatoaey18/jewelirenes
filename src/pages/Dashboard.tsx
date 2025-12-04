@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, ShoppingBag, Users, DollarSign, Receipt } from "lucide-react";
+import { TrendingUp, ShoppingBag, Users, DollarSign, Receipt, Banknote, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendDialog } from "@/components/dashboard/TrendDialog";
 import { useNavigate } from "react-router-dom";
+import { format, startOfDay, startOfWeek, startOfMonth, subDays, subWeeks, subMonths } from "date-fns";
+
+type PeriodFilter = "daily" | "weekly" | "monthly";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -14,6 +18,11 @@ const Dashboard = () => {
     totalRevenue: 0,
     totalExpenses: 0,
   });
+  const [cashCheckStats, setCashCheckStats] = useState({
+    cashReceived: 0,
+    checkReceived: 0,
+  });
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("daily");
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [trendDialog, setTrendDialog] = useState<{
     open: boolean;
@@ -48,6 +57,10 @@ const Dashboard = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    fetchCashCheckStats();
+  }, [periodFilter]);
 
   const fetchStats = async () => {
     const today = new Date();
@@ -87,6 +100,71 @@ const Dashboard = () => {
       totalCustomers: totalCustomers || 0,
       totalRevenue,
       totalExpenses,
+    });
+  };
+
+  const getPeriodStartDate = () => {
+    const now = new Date();
+    switch (periodFilter) {
+      case "daily":
+        return startOfDay(now);
+      case "weekly":
+        return startOfWeek(now, { weekStartsOn: 1 });
+      case "monthly":
+        return startOfMonth(now);
+      default:
+        return startOfDay(now);
+    }
+  };
+
+  const fetchCashCheckStats = async () => {
+    const periodStart = getPeriodStartDate();
+
+    // Fetch transactions with payment type
+    const { data: transactions } = await supabase
+      .from("transactions")
+      .select("total_amount, payment_type")
+      .gte("created_at", periodStart.toISOString());
+
+    // Fetch collections with payment method
+    const { data: collections } = await supabase
+      .from("collections")
+      .select("amount_paid, payment_method")
+      .gte("payment_date", periodStart.toISOString());
+
+    // Fetch bank checks received in the period
+    const { data: bankChecks } = await supabase
+      .from("bank_checks")
+      .select("amount")
+      .gte("date_received", periodStart.toISOString());
+
+    // Calculate cash received (from transactions + collections)
+    const cashFromTransactions = transactions
+      ?.filter(t => t.payment_type?.toLowerCase() === 'cash')
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+
+    const cashFromCollections = collections
+      ?.filter(c => c.payment_method?.toLowerCase() === 'cash')
+      .reduce((sum, c) => sum + Number(c.amount_paid), 0) || 0;
+
+    const cashReceived = cashFromTransactions + cashFromCollections;
+
+    // Calculate check received (from bank checks + transactions/collections with check payment)
+    const checkFromBankChecks = bankChecks?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+
+    const checkFromTransactions = transactions
+      ?.filter(t => t.payment_type?.toLowerCase() === 'check')
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+
+    const checkFromCollections = collections
+      ?.filter(c => c.payment_method?.toLowerCase() === 'check')
+      .reduce((sum, c) => sum + Number(c.amount_paid), 0) || 0;
+
+    const checkReceived = checkFromBankChecks + checkFromTransactions + checkFromCollections;
+
+    setCashCheckStats({
+      cashReceived,
+      checkReceived,
     });
   };
 
@@ -257,6 +335,45 @@ const Dashboard = () => {
             </Card>
           ))}
         </div>
+
+        {/* Cash & Check Received Section */}
+        <Card className="mb-6 sm:mb-8 border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Cash & Check Received</CardTitle>
+            <Select value={periodFilter} onValueChange={(value: PeriodFilter) => setPeriodFilter(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-green-500/10 rounded-lg p-4 flex items-center gap-4">
+                <div className="bg-green-500/20 p-3 rounded-full">
+                  <Banknote className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cash Received ({periodFilter === 'daily' ? 'Today' : periodFilter === 'weekly' ? 'This Week' : 'This Month'})</p>
+                  <p className="text-2xl font-bold text-green-600">₱{cashCheckStats.cashReceived.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="bg-blue-500/10 rounded-lg p-4 flex items-center gap-4">
+                <div className="bg-blue-500/20 p-3 rounded-full">
+                  <CreditCard className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Check Received ({periodFilter === 'daily' ? 'Today' : periodFilter === 'weekly' ? 'This Week' : 'This Month'})</p>
+                  <p className="text-2xl font-bold text-blue-600">₱{cashCheckStats.checkReceived.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="border-border/50">
           <CardHeader>

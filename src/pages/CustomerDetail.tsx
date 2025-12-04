@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Navigation from "@/components/Navigation";
 import { TransactionDetailDialog } from "@/components/customers/TransactionDetailDialog";
 import { BankCheckDetailDialog } from "@/components/customers/BankCheckDetailDialog";
+import { CustomerBankBookView } from "@/components/customers/CustomerBankBookView";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
@@ -522,35 +523,13 @@ const CustomerDetail = () => {
                 <CardTitle>Bank Checks</CardTitle>
               </CardHeader>
               <CardContent>
-                {bankChecks.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No bank checks found</p>
-                ) : (
-                  <div className="space-y-2">
-                    {bankChecks.map((check) => (
-                      <div 
-                        key={check.id} 
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => {
-                          setSelectedBankCheck(check);
-                          setBankCheckDialogOpen(true);
-                        }}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div>
-                            <p className="font-medium">{check.bank} - {check.branch}</p>
-                            <p className="text-sm text-muted-foreground">Check #{check.check_number}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-accent">₱{Number(check.amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'} className="mt-1">
-                            {check.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <CustomerBankBookView
+                  checks={bankChecks}
+                  onCheckClick={(check) => {
+                    setSelectedBankCheck(check);
+                    setBankCheckDialogOpen(true);
+                  }}
+                />
               </CardContent>
             </Card>
           </div>
