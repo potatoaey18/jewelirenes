@@ -220,9 +220,13 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
               .single();
 
             if (currentMaterial) {
-              const newQuantity = currentMaterial.quantity_on_hand - mat.quantity;
+              // Use pieces for piece-based materials, quantity for weight-based (gold/silver)
+              const deductAmount = (material.type === "diamond" || material.type === "gem" || material.type === "south_sea_pearl") 
+                ? (mat.pieces || 0) 
+                : (mat.quantity || 0);
+              const newQuantity = currentMaterial.quantity_on_hand - deductAmount;
               if (newQuantity < 0) {
-                throw new Error(`Insufficient ${material.name}. Available: ${currentMaterial.quantity_on_hand}, Required: ${mat.quantity}`);
+                throw new Error(`Insufficient ${material.name}. Available: ${currentMaterial.quantity_on_hand}, Required: ${deductAmount}`);
               }
               await supabase
                 .from("raw_materials")
@@ -245,9 +249,13 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
         for (const mat of materials) {
           const material = rawMaterials.find(m => m.id === mat.material_id);
           if (material) {
-            const newQuantity = material.quantity_on_hand - mat.quantity;
+            // Use pieces for piece-based materials, quantity for weight-based (gold/silver)
+            const deductAmount = (material.type === "diamond" || material.type === "gem" || material.type === "south_sea_pearl") 
+              ? (mat.pieces || 0) 
+              : (mat.quantity || 0);
+            const newQuantity = material.quantity_on_hand - deductAmount;
             if (newQuantity < 0) {
-              throw new Error(`Insufficient ${material.name}. Available: ${material.quantity_on_hand}, Required: ${mat.quantity}`);
+              throw new Error(`Insufficient ${material.name}. Available: ${material.quantity_on_hand}, Required: ${deductAmount}`);
             }
             await supabase
               .from("raw_materials")
@@ -259,10 +267,15 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
       // Insert materials
       for (const mat of materials) {
+        const material = rawMaterials.find(m => m.id === mat.material_id);
+        // Use pieces for piece-based materials, quantity for weight-based (gold/silver)
+        const quantityUsed = (material?.type === "diamond" || material?.type === "gem" || material?.type === "south_sea_pearl") 
+          ? (mat.pieces || 0) 
+          : (mat.quantity || 0);
         await supabase.from("item_materials").insert({
           item_id: itemId,
           material_id: mat.material_id,
-          quantity_used: mat.quantity,
+          quantity_used: quantityUsed,
           cost_at_time: mat.amountPerUnit,
           subtotal: calculateMaterialCost(mat)
         });
