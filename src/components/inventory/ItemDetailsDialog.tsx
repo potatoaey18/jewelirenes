@@ -7,12 +7,24 @@ export function ItemDetailsDialog({ open, onOpenChange, item }: any) {
   const getMaterialTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       gold: "Gold",
+      silver: "Silver",
       diamond: "Diamond",
       gem: "Gem",
       south_sea_pearl: "South Sea Pearl",
       other: "Other"
     };
     return labels[type] || type;
+  };
+
+  const isPieceBasedMaterial = (type: string) => {
+    return type === "diamond" || type === "gem" || type === "south_sea_pearl";
+  };
+
+  const formatQuantity = (quantity: number, type: string) => {
+    if (isPieceBasedMaterial(type)) {
+      return `${Math.round(quantity)} pcs`;
+    }
+    return `${Number(quantity).toFixed(2)} g`;
   };
 
   const getLaborTypeLabel = (type: string) => {
@@ -73,7 +85,7 @@ export function ItemDetailsDialog({ open, onOpenChange, item }: any) {
                   <TableRow key={index}>
                     <TableCell>{mat.raw_materials?.name}</TableCell>
                     <TableCell>{getMaterialTypeLabel(mat.raw_materials?.type)}</TableCell>
-                    <TableCell>{Number(mat.quantity_used).toFixed(2)}</TableCell>
+                    <TableCell>{formatQuantity(mat.quantity_used, mat.raw_materials?.type)}</TableCell>
                     <TableCell>₱{Number(mat.cost_at_time).toFixed(2)}</TableCell>
                     <TableCell className="text-right">₱{Number(mat.subtotal).toFixed(2)}</TableCell>
                   </TableRow>
