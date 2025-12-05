@@ -84,7 +84,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   };
 
   const addMaterial = () => {
-    setMaterials([...materials, { material_id: "", quantity: 0, amountPerUnit: 0 }]);
+    setMaterials([...materials, { material_id: "", quantity: 0, pieces: 1, carat: 0, size: 0, amountPerUnit: 0 }]);
   };
 
   const removeMaterial = (index: number) => {
