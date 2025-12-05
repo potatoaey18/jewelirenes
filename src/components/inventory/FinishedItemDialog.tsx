@@ -122,6 +122,8 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     } else if (material.type === "gem" || material.type === "south_sea_pearl") {
       const measurement = material.type === "gem" ? (mat.carat || 0) : (mat.size || 0);
       return measurement * (mat.amountPerUnit || 0) * (mat.pieces || 1);
+    } else if (material.type === "other") {
+      return (mat.quantity || 0) * (mat.amountPerUnit || 0);
     }
     return 0;
   };
@@ -220,18 +222,20 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
               .single();
 
             if (currentMaterial) {
-              // Use pieces for piece-based materials, quantity for weight-based (gold/silver)
+              // Use pieces for piece-based materials (diamond, gem, south_sea_pearl), quantity for weight/unit-based (gold, silver, other)
               const deductAmount = (material.type === "diamond" || material.type === "gem" || material.type === "south_sea_pearl") 
                 ? (mat.pieces || 0) 
                 : (mat.quantity || 0);
-              const newQuantity = currentMaterial.quantity_on_hand - deductAmount;
-              if (newQuantity < 0) {
-                throw new Error(`Insufficient ${material.name}. Available: ${currentMaterial.quantity_on_hand}, Required: ${deductAmount}`);
+              if (deductAmount > 0) {
+                const newQuantity = currentMaterial.quantity_on_hand - deductAmount;
+                if (newQuantity < 0) {
+                  throw new Error(`Insufficient ${material.name}. Available: ${currentMaterial.quantity_on_hand}, Required: ${deductAmount}`);
+                }
+                await supabase
+                  .from("raw_materials")
+                  .update({ quantity_on_hand: newQuantity })
+                  .eq("id", mat.material_id);
               }
-              await supabase
-                .from("raw_materials")
-                .update({ quantity_on_hand: newQuantity })
-                .eq("id", mat.material_id);
             }
           }
         }
@@ -249,18 +253,20 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
         for (const mat of materials) {
           const material = rawMaterials.find(m => m.id === mat.material_id);
           if (material) {
-            // Use pieces for piece-based materials, quantity for weight-based (gold/silver)
+            // Use pieces for piece-based materials (diamond, gem, south_sea_pearl), quantity for weight/unit-based (gold, silver, other)
             const deductAmount = (material.type === "diamond" || material.type === "gem" || material.type === "south_sea_pearl") 
               ? (mat.pieces || 0) 
               : (mat.quantity || 0);
-            const newQuantity = material.quantity_on_hand - deductAmount;
-            if (newQuantity < 0) {
-              throw new Error(`Insufficient ${material.name}. Available: ${material.quantity_on_hand}, Required: ${deductAmount}`);
+            if (deductAmount > 0) {
+              const newQuantity = material.quantity_on_hand - deductAmount;
+              if (newQuantity < 0) {
+                throw new Error(`Insufficient ${material.name}. Available: ${material.quantity_on_hand}, Required: ${deductAmount}`);
+              }
+              await supabase
+                .from("raw_materials")
+                .update({ quantity_on_hand: newQuantity })
+                .eq("id", mat.material_id);
             }
-            await supabase
-              .from("raw_materials")
-              .update({ quantity_on_hand: newQuantity })
-              .eq("id", mat.material_id);
           }
         }
       }
@@ -495,6 +501,33 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           </div>
                           <div>
                             <Label>Amount per {materialType === "gem" ? "Carat" : "Size"} (₱)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.amountPerUnit}
+                              onChange={(e) => updateMaterial(index, "amountPerUnit", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Total</Label>
+                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                          </div>
+                        </>
+                      )}
+
+                      {materialType === "other" && (
+                        <>
+                          <div>
+                            <Label>Quantity</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.quantity || 0}
+                              onChange={(e) => updateMaterial(index, "quantity", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Cost per Unit (₱)</Label>
                             <Input
                               type="number"
                               step="0.01"
