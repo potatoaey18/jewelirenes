@@ -85,7 +85,7 @@ const Auth = () => {
           <div className="flex justify-center mb-4">
             <Crown className="h-12 w-12 text-accent" />
           </div>
-          <CardTitle className="text-2xl font-bold">Store Manager</CardTitle>
+          <CardTitle className="text-2xl font-bold">Jewelirene's</CardTitle>
           <CardDescription>
             {isLogin ? "Sign in to your account" : "Create a new account"}
           </CardDescription>
