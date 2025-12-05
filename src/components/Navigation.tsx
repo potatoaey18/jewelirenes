@@ -50,7 +50,7 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16 sm:h-20">
           <div className="flex items-center gap-3">
             <Crown className="h-7 w-7 sm:h-8 sm:w-8 text-accent" />
-            <h1 className="text-xl sm:text-2xl font-bold">Store Manager</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Jewelirene's</h1>
           </div>
           
           <div className="flex items-center gap-2">
