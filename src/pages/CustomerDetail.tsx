@@ -15,6 +15,7 @@ import { BankCheckDetailDialog } from "@/components/customers/BankCheckDetailDia
 import { CustomerBankBookView } from "@/components/customers/CustomerBankBookView";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatCurrencyForPDF } from "@/lib/pdfUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -243,7 +244,7 @@ const CustomerDetail = () => {
         return [
           format(new Date(transaction.created_at), "PP"),
           transaction.transaction_type,
-          `₱${transaction.total_amount}`,
+          formatCurrencyForPDF(transaction.total_amount),
           status,
         ];
       }),
@@ -254,7 +255,7 @@ const CustomerDetail = () => {
     doc.text(`Total Transactions: ${exportTransactions.length}`, 14, finalY + 10);
     
     const total = exportTransactions.reduce((sum: number, t: any) => sum + Number(t.total_amount), 0);
-    doc.text(`Total Amount: ₱${total}`, 14, finalY + 18);
+    doc.text(`Total Amount: ${formatCurrencyForPDF(total)}`, 14, finalY + 18);
     
     doc.save(`${customer?.name || "customer"}-${filter}-transactions.pdf`);
     toast.success("PDF exported successfully");

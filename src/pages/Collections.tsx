@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +20,9 @@ import { BankCheckDialog } from '@/components/collections/BankCheckDialog';
 import { BankCheckBookView } from '@/components/collections/BankCheckBookView';
 import { BankCheckDetailDialog } from '@/components/customers/BankCheckDetailDialog';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { formatCurrencyForPDF } from '@/lib/pdfUtils';
 
 export default function Collections() {
   const { user } = useAuth();
@@ -217,6 +220,111 @@ export default function Collections() {
     plan.customers?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleExportPaymentPlansPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Payment Plans Report", 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    const tableData = filteredPlans.map((plan) => {
+      const productNames = plan.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
+      return [
+        plan.customers?.name || 'Unknown',
+        productNames,
+        formatCurrencyForPDF(plan.total_amount),
+        formatCurrencyForPDF(plan.amount_paid),
+        formatCurrencyForPDF(plan.balance),
+        plan.status
+      ];
+    });
+    
+    autoTable(doc, {
+      head: [["Customer", "Products", "Total Amount", "Amount Paid", "Balance", "Status"]],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 175, 55] }
+    });
+    
+    doc.save(`payment-plans-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("PDF exported successfully");
+  };
+
+  const handleExportPaymentHistoryPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Payment History Report", 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    const tableData = collections.map((collection) => {
+      const productNames = collection.payment_plans?.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
+      return [
+        new Date(collection.payment_date).toLocaleDateString(),
+        collection.payment_plans?.customers?.name || 'Unknown',
+        productNames,
+        formatCurrencyForPDF(collection.amount_paid),
+        collection.payment_method || '-',
+        collection.notes || '-'
+      ];
+    });
+    
+    autoTable(doc, {
+      head: [["Payment Date", "Customer", "Products", "Amount Paid", "Payment Method", "Notes"]],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 175, 55] }
+    });
+    
+    doc.save(`payment-history-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("PDF exported successfully");
+  };
+
+  const handleExportBankChecksPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Bank Checks Report", 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    const tableData = bankChecks.map((check) => [
+      check.customers?.name || 'Unknown',
+      check.bank,
+      check.check_number,
+      new Date(check.check_date).toLocaleDateString(),
+      formatCurrencyForPDF(check.amount),
+      check.status
+    ]);
+    
+    autoTable(doc, {
+      head: [["Customer", "Bank", "Check Number", "Check Date", "Amount", "Status"]],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 175, 55] }
+    });
+    
+    // Add summary
+    const finalY = (doc as any).lastAutoTable?.finalY || 35;
+    const totalAmount = bankChecks.reduce((sum, c) => sum + Number(c.amount), 0);
+    const encashedTotal = bankChecks.filter(c => c.status === 'Encashed').reduce((sum, c) => sum + Number(c.amount), 0);
+    const pendingTotal = bankChecks.filter(c => c.status !== 'Encashed').reduce((sum, c) => sum + Number(c.amount), 0);
+    
+    doc.setFontSize(12);
+    doc.text(`Total Checks: ${bankChecks.length}`, 14, finalY + 10);
+    doc.text(`Total Amount: ${formatCurrencyForPDF(totalAmount)}`, 14, finalY + 18);
+    doc.text(`Encashed: ${formatCurrencyForPDF(encashedTotal)}`, 14, finalY + 26);
+    doc.text(`Pending: ${formatCurrencyForPDF(pendingTotal)}`, 14, finalY + 34);
+    
+    doc.save(`bank-checks-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("PDF exported successfully");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -337,8 +445,8 @@ export default function Collections() {
 
           <TabsContent value="plans">
             <Card className="p-6">
-              <div className="mb-4">
-                <div className="relative">
+              <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Search by customer name..."
@@ -347,6 +455,10 @@ export default function Collections() {
                     className="pl-10"
                   />
                 </div>
+                <Button variant="outline" onClick={handleExportPaymentPlansPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
               </div>
 
               <div className="overflow-x-auto">
@@ -401,6 +513,12 @@ export default function Collections() {
 
           <TabsContent value="payments">
             <Card className="p-6">
+              <div className="flex justify-end mb-4">
+                <Button variant="outline" onClick={handleExportPaymentHistoryPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -435,7 +553,11 @@ export default function Collections() {
 
           <TabsContent value="checks">
             <Card className="p-6">
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button variant="outline" onClick={handleExportBankChecksPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
                 <Button onClick={() => setBankCheckDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Bank Check

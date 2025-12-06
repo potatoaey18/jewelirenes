@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Navigation from "@/components/Navigation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatCurrencyForPDF } from "@/lib/pdfUtils";
 
 const Customers = () => {
   const navigate = useNavigate();
@@ -174,9 +175,9 @@ const Customers = () => {
         customer.email || "-",
         customer.phone || "-",
         customer.location || "-",
-        `₱${totalSpent.toLocaleString()}`,
+        formatCurrencyForPDF(totalSpent),
         purchases.toString(),
-        `₱${unpaidBalance.toLocaleString()}`
+        formatCurrencyForPDF(unpaidBalance)
       ];
     });
     
@@ -216,11 +217,11 @@ const Customers = () => {
         dateSold,
         customerName,
         productNames,
-        `₱${retailPrice.toLocaleString()}`,
-        discount > 0 ? `₱${discount.toLocaleString()}` : "-",
-        discount > 0 ? `₱${discountedPrice.toLocaleString()}` : "-",
-        `₱${payments.toLocaleString()}`,
-        `₱${balance.toLocaleString()}`
+        formatCurrencyForPDF(retailPrice),
+        discount > 0 ? formatCurrencyForPDF(discount) : "-",
+        discount > 0 ? formatCurrencyForPDF(discountedPrice) : "-",
+        formatCurrencyForPDF(payments),
+        formatCurrencyForPDF(balance)
       ];
     });
     
