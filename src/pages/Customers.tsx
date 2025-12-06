@@ -3,6 +3,7 @@ import { UserPlus, Search, Phone, Mail, MapPin, ShoppingBag, Trash2, Edit2, User
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createAuditLog } from "@/lib/auditLog";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import {
   AlertDialog,
@@ -111,12 +112,17 @@ const Customers = () => {
     if (!customerToDelete) return;
 
     try {
+      // Get customer data before deletion for audit log
+      const customerData = customers.find(c => c.id === customerToDelete);
+      
       const { error } = await supabase
         .from("customers")
         .delete()
         .eq("id", customerToDelete);
 
       if (error) throw error;
+      
+      await createAuditLog('DELETE', 'customers', customerToDelete, { name: customerData?.name }, undefined);
       toast.success("Customer deleted");
       fetchCustomers();
     } catch (error: any) {

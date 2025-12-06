@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface Material {
   material_id: string;
@@ -300,6 +301,11 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
         });
       }
 
+      if (item) {
+        await createAuditLog('UPDATE', 'finished_items', item.id, { name: item.name, sku: item.sku }, itemData);
+      } else {
+        await createAuditLog('CREATE', 'finished_items', itemId, undefined, itemData);
+      }
       toast.success(item ? "Item updated successfully" : "Item created successfully");
       onSuccess();
       onOpenChange(false);

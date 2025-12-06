@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -101,6 +102,7 @@ export const CustomerDialog = ({ open, onOpenChange, customer, onSuccess }: Cust
           .update(customerData)
           .eq("id", customer.id);
         if (error) throw error;
+        await createAuditLog('UPDATE', 'customers', customer.id, { name: customer.name }, customerData);
         toast.success("Customer updated successfully");
       } else {
         const { data: newCustomer, error } = await supabase
@@ -125,6 +127,7 @@ export const CustomerDialog = ({ open, onOpenChange, customer, onSuccess }: Cust
           console.error("Failed to create customer folder:", folderError);
         }
 
+        await createAuditLog('CREATE', 'customers', newCustomer.id, undefined, customerData);
         toast.success("Customer created successfully");
       }
 
