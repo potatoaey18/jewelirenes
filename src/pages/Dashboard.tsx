@@ -7,7 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { TrendDialog } from "@/components/dashboard/TrendDialog";
 import { CashCheckSummaryDialog } from "@/components/dashboard/CashCheckSummaryDialog";
 import { useNavigate } from "react-router-dom";
-import { format, startOfDay, startOfWeek, startOfMonth, subDays, subWeeks, subMonths } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths, subYears, eachDayOfInterval, eachMonthOfInterval } from "date-fns";
+
+type TrendPeriod = "weekly" | "monthly" | "yearly";
 
 interface TransactionSummary {
   id: string;
@@ -39,7 +41,8 @@ const Dashboard = () => {
     title: string;
     data: Array<{ date: string; value: number; details?: any }>;
     type?: string;
-  }>({ open: false, title: "", data: [] });
+    period: TrendPeriod;
+  }>({ open: false, title: "", data: [], period: "weekly" });
   const [cashCheckDialog, setCashCheckDialog] = useState<{
     open: boolean;
     type: "cash" | "check";
@@ -96,12 +99,22 @@ const Dashboard = () => {
       .from("customers")
       .select("*", { count: "exact", head: true });
 
-    // Total revenue
+    // Total revenue from transactions
     const { data: allTransactions } = await supabase
       .from("transactions")
       .select("total_amount");
 
-    const totalRevenue = allTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+    const transactionRevenue = allTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+
+    // Add encashed bank checks to revenue
+    const { data: encashedChecks } = await supabase
+      .from("bank_checks")
+      .select("amount")
+      .eq("status", "Encashed");
+
+    const encashedCheckRevenue = encashedChecks?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+
+    const totalRevenue = transactionRevenue + encashedCheckRevenue;
 
     // Total expenses
     const { data: allExpenses } = await supabase
@@ -350,30 +363,47 @@ const Dashboard = () => {
     setRecentSales(data || []);
   };
 
-  const fetchTrendData = async (type: string) => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const fetchTrendData = async (type: string, period: TrendPeriod = "weekly") => {
+    let startDate: Date;
+    let groupByMonth = false;
+
+    switch (period) {
+      case "weekly":
+        startDate = subDays(new Date(), 7);
+        break;
+      case "monthly":
+        startDate = subDays(new Date(), 30);
+        break;
+      case "yearly":
+        startDate = subYears(new Date(), 1);
+        groupByMonth = true;
+        break;
+      default:
+        startDate = subDays(new Date(), 7);
+    }
 
     if (type === "sales" || type === "revenue") {
       const { data } = await supabase
         .from("transactions")
         .select("total_amount, created_at, id")
-        .gte("created_at", sevenDaysAgo.toISOString())
+        .gte("created_at", startDate.toISOString())
         .order("created_at", { ascending: true });
 
-      const dailyData = new Map<string, { value: number; transactions: any[] }>();
+      const groupedData = new Map<string, { value: number; transactions: any[] }>();
       
       data?.forEach((t) => {
-        const date = new Date(t.created_at).toISOString().split("T")[0];
-        const existing = dailyData.get(date) || { value: 0, transactions: [] };
-        dailyData.set(date, {
+        const date = groupByMonth 
+          ? format(new Date(t.created_at), "yyyy-MM") 
+          : new Date(t.created_at).toISOString().split("T")[0];
+        const existing = groupedData.get(date) || { value: 0, transactions: [] };
+        groupedData.set(date, {
           value: existing.value + Number(t.total_amount),
           transactions: [...existing.transactions, t],
         });
       });
 
-      const trendData = Array.from(dailyData.entries()).map(([date, data]) => ({
-        date,
+      const trendData = Array.from(groupedData.entries()).map(([date, data]) => ({
+        date: groupByMonth ? `${date}-01` : date,
         value: data.value,
         details: { transactions: data.transactions, type: "transaction" },
       }));
@@ -383,27 +413,30 @@ const Dashboard = () => {
         title: type === "sales" ? "Today's Sales" : "Revenue",
         data: trendData,
         type: "transaction",
+        period,
       });
     } else if (type === "expenses") {
       const { data } = await supabase
         .from("expenses")
         .select("amount, expense_date, id")
-        .gte("expense_date", sevenDaysAgo.toISOString())
+        .gte("expense_date", startDate.toISOString())
         .order("expense_date", { ascending: true });
 
-      const dailyData = new Map<string, { value: number; expenses: any[] }>();
+      const groupedData = new Map<string, { value: number; expenses: any[] }>();
       
       data?.forEach((e) => {
-        const date = new Date(e.expense_date).toISOString().split("T")[0];
-        const existing = dailyData.get(date) || { value: 0, expenses: [] };
-        dailyData.set(date, {
+        const date = groupByMonth 
+          ? format(new Date(e.expense_date), "yyyy-MM") 
+          : new Date(e.expense_date).toISOString().split("T")[0];
+        const existing = groupedData.get(date) || { value: 0, expenses: [] };
+        groupedData.set(date, {
           value: existing.value + Number(e.amount),
           expenses: [...existing.expenses, e],
         });
       });
 
-      const trendData = Array.from(dailyData.entries()).map(([date, data]) => ({
-        date,
+      const trendData = Array.from(groupedData.entries()).map(([date, data]) => ({
+        date: groupByMonth ? `${date}-01` : date,
         value: data.value,
         details: { expenses: data.expenses, type: "expense" },
       }));
@@ -413,17 +446,24 @@ const Dashboard = () => {
         title: "Expenses",
         data: trendData,
         type: "expense",
+        period,
       });
+    }
+  };
+
+  const handleTrendPeriodChange = (period: TrendPeriod) => {
+    if (trendDialog.type) {
+      fetchTrendData(trendDialog.type === "transaction" ? "revenue" : "expenses", period);
     }
   };
 
   const handleDataPointClick = (details: any) => {
     if (details.type === "transaction" && details.transactions?.[0]) {
       navigate("/sales");
-      setTrendDialog({ open: false, title: "", data: [] });
+      setTrendDialog({ open: false, title: "", data: [], period: "weekly" });
     } else if (details.type === "expense" && details.expenses?.[0]) {
       navigate("/expenses");
-      setTrendDialog({ open: false, title: "", data: [] });
+      setTrendDialog({ open: false, title: "", data: [], period: "weekly" });
     }
   };
 
@@ -587,6 +627,7 @@ const Dashboard = () => {
           title={trendDialog.title}
           data={trendDialog.data}
           onDataPointClick={handleDataPointClick}
+          onPeriodChange={handleTrendPeriodChange}
         />
 
         <CashCheckSummaryDialog

@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatCurrencyForPDF } from "@/lib/pdfUtils";
 
 interface TransactionDetailDialogProps {
   transaction: any;
@@ -114,7 +115,7 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
     doc.setFontSize(12);
     doc.text(`Date: ${format(new Date(transaction.created_at), "PPP")}`, 14, yPos);
     yPos += 8;
-    doc.text(`Total Amount: Php ${transaction.total_amount}`, 14, yPos);
+    doc.text(`Total Amount: ${formatCurrencyForPDF(transaction.total_amount)}`, 14, yPos);
     yPos += 8;
     doc.text(`Type: ${transaction.transaction_type}`, 14, yPos);
     yPos += 8;
@@ -128,8 +129,8 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
         body: transaction.transaction_items.map((item: any) => [
           item.product_name,
           item.quantity,
-          `Php ${item.unit_price}`,
-          `Php ${item.subtotal}`,
+          formatCurrencyForPDF(item.unit_price),
+          formatCurrencyForPDF(item.subtotal),
         ]),
       });
     }
@@ -141,9 +142,9 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
         startY: finalY + 15,
         head: [["Total", "Paid", "Balance", "Status"]],
         body: [[
-          `Php ${paymentPlan.total_amount}`,
-          `Php ${paymentPlan.amount_paid}`,
-          `Php ${paymentPlan.balance}`,
+          formatCurrencyForPDF(paymentPlan.total_amount),
+          formatCurrencyForPDF(paymentPlan.amount_paid),
+          formatCurrencyForPDF(paymentPlan.balance),
           paymentPlan.status,
         ]],
       });
@@ -157,7 +158,7 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
         head: [["Date", "Amount", "Method", "Notes"]],
         body: collections.map((col: any) => [
           format(new Date(col.payment_date), "PP"),
-          `Php ${col.amount_paid}`,
+          formatCurrencyForPDF(col.amount_paid),
           col.payment_method || "N/A",
           col.notes || "",
         ]),

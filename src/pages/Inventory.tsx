@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import { formatCurrencyForPDF } from "@/lib/pdfUtils";
 
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState("items");
@@ -62,8 +63,8 @@ export default function Inventory() {
         new Date(item.date_manufactured).toLocaleDateString(),
         item.sku,
         item.name,
-        `₱${Number(item.total_cost).toFixed(2)}`,
-        `₱${Number(item.selling_price).toFixed(2)}`,
+        formatCurrencyForPDF(item.total_cost),
+        formatCurrencyForPDF(item.selling_price),
         item.stock.toString()
       ]) || [];
 
@@ -100,7 +101,7 @@ export default function Inventory() {
         material.name,
         material.type,
         `${Number(material.quantity_on_hand).toFixed(2)} ${material.unit}`,
-        `₱${Number(material.cost_per_unit).toFixed(2)}`
+        formatCurrencyForPDF(material.cost_per_unit)
       ]) || [];
 
       autoTable(doc, {
