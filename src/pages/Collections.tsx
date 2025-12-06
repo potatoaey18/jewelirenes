@@ -138,6 +138,7 @@ export default function Collections() {
       if (paymentError) throw paymentError;
 
       const plan = paymentPlans.find(p => p.id === planId);
+      const oldPlanData = { amount_paid: plan.amount_paid, balance: plan.balance, status: plan.status };
       const newAmountPaid = Number(plan.amount_paid) + Number(payment.amount_paid);
       const newBalance = Number(plan.total_amount) - newAmountPaid;
       const newStatus = newBalance <= 0 ? 'completed' : 'active';
@@ -152,7 +153,8 @@ export default function Collections() {
         .eq('id', planId);
       
       if (updateError) throw updateError;
-      await createAuditLog('CREATE', 'collections', undefined, undefined, payment);
+      await createAuditLog('CREATE', 'collections', undefined, undefined, { ...payment, customer: plan.customers?.name });
+      await createAuditLog('UPDATE', 'payment_plans', planId, oldPlanData, { amount_paid: newAmountPaid, balance: newBalance, status: newStatus });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment_plans'] });

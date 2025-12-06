@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createAuditLog } from "@/lib/auditLog";
 
 export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -69,13 +70,17 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
           .eq("id", material.id);
 
         if (error) throw error;
+        await createAuditLog('UPDATE', 'raw_materials', material.id, { name: material.name }, data);
         toast.success("Material updated successfully");
       } else {
-        const { error } = await supabase
+        const { data: newMaterial, error } = await supabase
           .from("raw_materials")
-          .insert(data);
+          .insert(data)
+          .select()
+          .single();
 
         if (error) throw error;
+        await createAuditLog('CREATE', 'raw_materials', newMaterial?.id, undefined, data);
         toast.success("Material created successfully");
       }
 
