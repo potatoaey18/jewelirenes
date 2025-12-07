@@ -126,109 +126,120 @@ export default function Expenses() {
             <h1 className="text-4xl sm:text-5xl font-bold mb-2">Expenses</h1>
             <p className="text-muted-foreground text-lg">Track and manage business expenses</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full md:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Expense
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Expense</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="amount" className="text-base font-semibold mb-2 block">Amount (₱)</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      required
-                      value={formData.amount}
-                      onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                      className="h-12 text-base"
-                    />
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+              <Input
+                placeholder="Search expenses..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-12 h-12 text-base"
+              />
+            </div>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full md:w-auto h-12">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Expense
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Expense</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="amount" className="text-base font-semibold mb-2 block">Amount (₱)</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        required
+                        value={formData.amount}
+                        onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="expense_date" className="text-base font-semibold mb-2 block">Date</Label>
+                      <Input
+                        id="expense_date"
+                        type="date"
+                        required
+                        value={formData.expense_date}
+                        onChange={(e) => setFormData({...formData, expense_date: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="category" className="text-base font-semibold mb-2 block">Category</Label>
+                      <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Supplies">Supplies</SelectItem>
+                          <SelectItem value="Utilities">Utilities</SelectItem>
+                          <SelectItem value="Rent">Rent</SelectItem>
+                          <SelectItem value="Salaries">Salaries</SelectItem>
+                          <SelectItem value="Marketing">Marketing</SelectItem>
+                          <SelectItem value="Equipment">Equipment</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="vendor" className="text-base font-semibold mb-2 block">Vendor</Label>
+                      <Input
+                        id="vendor"
+                        value={formData.vendor}
+                        onChange={(e) => setFormData({...formData, vendor: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="payment_method" className="text-base font-semibold mb-2 block">Payment Method</Label>
+                      <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue placeholder="Select method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Cash">Cash</SelectItem>
+                          <SelectItem value="Credit Card">Credit Card</SelectItem>
+                          <SelectItem value="Debit Card">Debit Card</SelectItem>
+                          <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="Check">Check</SelectItem>
+                          <SelectItem value="GCash">GCash</SelectItem>
+                          <SelectItem value="BDO">BDO</SelectItem>
+                          <SelectItem value="BPI">BPI</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="description" className="text-base font-semibold mb-2 block">Description</Label>
+                      <Input
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="notes" className="text-base font-semibold mb-2 block">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                        className="min-h-[100px] text-base"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="expense_date" className="text-base font-semibold mb-2 block">Date</Label>
-                    <Input
-                      id="expense_date"
-                      type="date"
-                      required
-                      value={formData.expense_date}
-                      onChange={(e) => setFormData({...formData, expense_date: e.target.value})}
-                      className="h-12 text-base"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category" className="text-base font-semibold mb-2 block">Category</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                      <SelectTrigger className="h-12 text-base">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Supplies">Supplies</SelectItem>
-                        <SelectItem value="Utilities">Utilities</SelectItem>
-                        <SelectItem value="Rent">Rent</SelectItem>
-                        <SelectItem value="Salaries">Salaries</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Equipment">Equipment</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="vendor" className="text-base font-semibold mb-2 block">Vendor</Label>
-                    <Input
-                      id="vendor"
-                      value={formData.vendor}
-                      onChange={(e) => setFormData({...formData, vendor: e.target.value})}
-                      className="h-12 text-base"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="payment_method" className="text-base font-semibold mb-2 block">Payment Method</Label>
-                    <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
-                      <SelectTrigger className="h-12 text-base">
-                        <SelectValue placeholder="Select method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="Credit Card">Credit Card</SelectItem>
-                        <SelectItem value="Debit Card">Debit Card</SelectItem>
-                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="Check">Check</SelectItem>
-                        <SelectItem value="GCash">GCash</SelectItem>
-                        <SelectItem value="BDO">BDO</SelectItem>
-                        <SelectItem value="BPI">BPI</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="description" className="text-base font-semibold mb-2 block">Description</Label>
-                    <Input
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="h-12 text-base"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="notes" className="text-base font-semibold mb-2 block">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="min-h-[100px] text-base"
-                    />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full text-lg">Add Expense</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <Button type="submit" className="w-full text-lg">Add Expense</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <Card className="mb-8 p-8">
@@ -249,16 +260,7 @@ export default function Expenses() {
 
           <TabsContent value="expenses">
             <Card className="p-6 sm:p-8">
-              <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                  <Input
-                    placeholder="Search expenses..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-12 h-14 text-base"
-                  />
-                </div>
+              <div className="flex justify-end mb-6">
                 <Button variant="outline" onClick={handleExportPDF}>
                   <Download className="mr-2 h-4 w-4" />
                   Export PDF

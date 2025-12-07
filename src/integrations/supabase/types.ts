@@ -234,6 +234,60 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_bank_checks: {
+        Row: {
+          amount: number
+          bank: string
+          branch: string
+          check_date: string
+          check_number: string
+          created_at: string
+          created_by: string
+          date_received: string
+          expiry_date: string | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          status: string
+          updated_at: string
+          vendor: string
+        }
+        Insert: {
+          amount: number
+          bank: string
+          branch: string
+          check_date: string
+          check_number: string
+          created_at?: string
+          created_by: string
+          date_received?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          vendor: string
+        }
+        Update: {
+          amount?: number
+          bank?: string
+          branch?: string
+          check_date?: string
+          check_number?: string
+          created_at?: string
+          created_by?: string
+          date_received?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          vendor?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number

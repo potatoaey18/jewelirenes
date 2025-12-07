@@ -1,8 +1,18 @@
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Receipt } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Building2, Receipt, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { createAuditLog } from '@/lib/auditLog';
+import { useAuth } from '@/hooks/useAuth';
 
 interface VendorDirectoryProps {
   expenses: any[];
@@ -17,6 +27,13 @@ interface VendorSummary {
 }
 
 export function VendorDirectory({ expenses }: VendorDirectoryProps) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [formData, setFormData] = useState({ vendor: '' });
+
   const vendors = useMemo(() => {
     const vendorMap = new Map<string, VendorSummary>();
 
@@ -27,7 +44,7 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
       if (existing) {
         existing.totalAmount += Number(expense.amount);
         existing.transactionCount += 1;
-        if (!existing.categories.includes(expense.category)) {
+        if (expense.category && !existing.categories.includes(expense.category)) {
           existing.categories.push(expense.category);
         }
         if (new Date(expense.expense_date) > new Date(existing.lastPayment)) {
@@ -47,7 +64,75 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
     return Array.from(vendorMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
   }, [expenses]);
 
+  const filteredVendors = vendors.filter(vendor =>
+    vendor.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   const totalVendorSpend = vendors.reduce((sum, v) => sum + v.totalAmount, 0);
+
+  // Update all expenses with old vendor name to new vendor name
+  const updateVendor = useMutation({
+    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+      const { error } = await supabase
+        .from('expenses')
+        .update({ vendor: newName })
+        .eq('vendor', oldName);
+      
+      if (error) throw error;
+      await createAuditLog('UPDATE', 'expenses', undefined, { vendor: oldName }, { vendor: newName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Vendor updated successfully');
+      setDialogOpen(false);
+      setEditingVendor(null);
+      setFormData({ vendor: '' });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update vendor');
+    }
+  });
+
+  // Delete all expenses for a vendor
+  const deleteVendor = useMutation({
+    mutationFn: async (vendorName: string) => {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('vendor', vendorName);
+      
+      if (error) throw error;
+      await createAuditLog('DELETE', 'expenses', undefined, { vendor: vendorName }, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Vendor and all related expenses deleted');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete vendor');
+    }
+  });
+
+  const handleEdit = (vendor: VendorSummary) => {
+    setEditingVendor(vendor.name);
+    setFormData({ vendor: vendor.name });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingVendor && formData.vendor) {
+      updateVendor.mutate({ oldName: editingVendor, newName: formData.vendor });
+    }
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingVendor(null);
+      setFormData({ vendor: '' });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -94,6 +179,18 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
       </div>
 
       <Card className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search vendors..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -103,10 +200,11 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
                 <TableHead className="text-base font-semibold text-center">Transactions</TableHead>
                 <TableHead className="text-base font-semibold">Last Payment</TableHead>
                 <TableHead className="text-right text-base font-semibold">Total Amount</TableHead>
+                <TableHead className="text-right text-base font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {vendors.map((vendor) => (
+              {filteredVendors.map((vendor) => (
                 <TableRow key={vendor.name}>
                   <TableCell className="py-4 font-medium">{vendor.name}</TableCell>
                   <TableCell className="py-4">
@@ -130,11 +228,65 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
                   <TableCell className="text-right font-semibold py-4 text-lg">
                     ₱{vendor.totalAmount.toLocaleString()}
                   </TableCell>
+                  <TableCell className="text-right py-4">
+                    <div className="flex justify-end gap-2">
+                      <Dialog open={dialogOpen && editingVendor === vendor.name} onOpenChange={handleDialogClose}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Vendor Name</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                              <Label htmlFor="vendor">Vendor Name</Label>
+                              <Input
+                                id="vendor"
+                                value={formData.vendor}
+                                onChange={(e) => setFormData({ vendor: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              This will update {vendor.transactionCount} expense record(s) with this vendor name.
+                            </p>
+                            <Button type="submit" className="w-full">Update Vendor</Button>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Vendor?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete all {vendor.transactionCount} expense(s) 
+                              totaling ₱{vendor.totalAmount.toLocaleString()} for "{vendor.name}". 
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteVendor.mutate(vendor.name)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
-              {vendors.length === 0 && (
+              {filteredVendors.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No vendors found
                   </TableCell>
                 </TableRow>

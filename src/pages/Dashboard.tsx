@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, ShoppingBag, Users, DollarSign, Receipt, Banknote, CreditCard } from "lucide-react";
+import { TrendingUp, ShoppingBag, Users, DollarSign, Receipt, Banknote, Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendDialog } from "@/components/dashboard/TrendDialog";
-import { CashCheckSummaryDialog } from "@/components/dashboard/CashCheckSummaryDialog";
+import { CashOnlinePaymentDialog } from "@/components/dashboard/CashOnlinePaymentDialog";
 import { useNavigate } from "react-router-dom";
-import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths, subYears, eachDayOfInterval, eachMonthOfInterval } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, subDays, subYears } from "date-fns";
 
 type TrendPeriod = "weekly" | "monthly" | "yearly";
 
@@ -18,6 +18,13 @@ interface TransactionSummary {
   amount: number;
   date: string;
   source: "transaction" | "collection" | "bank_check";
+  payment_method?: string;
+}
+
+interface OnlinePaymentSummary {
+  gcash: TransactionSummary[];
+  bdo: TransactionSummary[];
+  bpi: TransactionSummary[];
 }
 
 type PeriodFilter = "daily" | "weekly" | "monthly";
@@ -30,9 +37,11 @@ const Dashboard = () => {
     totalRevenue: 0,
     totalExpenses: 0,
   });
-  const [cashCheckStats, setCashCheckStats] = useState({
+  const [cashOnlineStats, setCashOnlineStats] = useState({
     cashReceived: 0,
-    checkReceived: 0,
+    gcashReceived: 0,
+    bdoReceived: 0,
+    bpiReceived: 0,
   });
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("daily");
   const [recentSales, setRecentSales] = useState<any[]>([]);
@@ -43,19 +52,27 @@ const Dashboard = () => {
     type?: string;
     period: TrendPeriod;
   }>({ open: false, title: "", data: [], period: "weekly" });
-  const [cashCheckDialog, setCashCheckDialog] = useState<{
+  const [cashOnlineDialog, setCashOnlineDialog] = useState<{
     open: boolean;
-    type: "cash" | "check";
-    data: TransactionSummary[];
-    totalAmount: number;
-  }>({ open: false, type: "cash", data: [], totalAmount: 0 });
+    type: "cash" | "online";
+    cashData: TransactionSummary[];
+    onlineData: OnlinePaymentSummary;
+    totalCash: number;
+    totalOnline: { gcash: number; bdo: number; bpi: number };
+  }>({ 
+    open: false, 
+    type: "cash", 
+    cashData: [], 
+    onlineData: { gcash: [], bdo: [], bpi: [] },
+    totalCash: 0,
+    totalOnline: { gcash: 0, bdo: 0, bpi: 0 }
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchStats();
     fetchRecentSales();
 
-    // Set up realtime subscription for transactions
     const channel = supabase
       .channel("dashboard-updates")
       .on(
@@ -78,14 +95,13 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    fetchCashCheckStats();
+    fetchCashOnlineStats();
   }, [periodFilter]);
 
   const fetchStats = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Today's sales and orders
     const { data: todayTransactions } = await supabase
       .from("transactions")
       .select("total_amount")
@@ -94,19 +110,16 @@ const Dashboard = () => {
     const todaySales = todayTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
     const todayOrders = todayTransactions?.length || 0;
 
-    // Total customers
     const { count: totalCustomers } = await supabase
       .from("customers")
       .select("*", { count: "exact", head: true });
 
-    // Total revenue from transactions
     const { data: allTransactions } = await supabase
       .from("transactions")
       .select("total_amount");
 
     const transactionRevenue = allTransactions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
 
-    // Add encashed bank checks to revenue
     const { data: encashedChecks } = await supabase
       .from("bank_checks")
       .select("amount")
@@ -116,7 +129,6 @@ const Dashboard = () => {
 
     const totalRevenue = transactionRevenue + encashedCheckRevenue;
 
-    // Total expenses
     const { data: allExpenses } = await supabase
       .from("expenses")
       .select("amount");
@@ -146,7 +158,7 @@ const Dashboard = () => {
     }
   };
 
-  const fetchCashCheckStats = async () => {
+  const fetchCashOnlineStats = async () => {
     const periodStart = getPeriodStartDate();
 
     // Fetch transactions with payment type
@@ -161,13 +173,7 @@ const Dashboard = () => {
       .select("amount_paid, payment_method")
       .gte("payment_date", periodStart.toISOString());
 
-    // Fetch bank checks received in the period
-    const { data: bankChecks } = await supabase
-      .from("bank_checks")
-      .select("amount")
-      .gte("date_received", periodStart.toISOString());
-
-    // Calculate cash received (from transactions + collections)
+    // Calculate cash received
     const cashFromTransactions = transactions
       ?.filter(t => t.payment_type?.toLowerCase() === 'cash')
       .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
@@ -178,31 +184,54 @@ const Dashboard = () => {
 
     const cashReceived = cashFromTransactions + cashFromCollections;
 
-    // Calculate check received (from bank checks + transactions/collections with check payment)
-    const checkFromBankChecks = bankChecks?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
-
-    const checkFromTransactions = transactions
-      ?.filter(t => t.payment_type?.toLowerCase() === 'check')
+    // Calculate GCash received
+    const gcashFromTransactions = transactions
+      ?.filter(t => t.payment_type?.toLowerCase() === 'gcash')
       .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
 
-    const checkFromCollections = collections
-      ?.filter(c => c.payment_method?.toLowerCase() === 'check')
+    const gcashFromCollections = collections
+      ?.filter(c => c.payment_method?.toLowerCase() === 'gcash')
       .reduce((sum, c) => sum + Number(c.amount_paid), 0) || 0;
 
-    const checkReceived = checkFromBankChecks + checkFromTransactions + checkFromCollections;
+    const gcashReceived = gcashFromTransactions + gcashFromCollections;
 
-    setCashCheckStats({
+    // Calculate BDO received
+    const bdoFromTransactions = transactions
+      ?.filter(t => t.payment_type?.toLowerCase() === 'bdo')
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+
+    const bdoFromCollections = collections
+      ?.filter(c => c.payment_method?.toLowerCase() === 'bdo')
+      .reduce((sum, c) => sum + Number(c.amount_paid), 0) || 0;
+
+    const bdoReceived = bdoFromTransactions + bdoFromCollections;
+
+    // Calculate BPI received
+    const bpiFromTransactions = transactions
+      ?.filter(t => t.payment_type?.toLowerCase() === 'bpi')
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+
+    const bpiFromCollections = collections
+      ?.filter(c => c.payment_method?.toLowerCase() === 'bpi')
+      .reduce((sum, c) => sum + Number(c.amount_paid), 0) || 0;
+
+    const bpiReceived = bpiFromTransactions + bpiFromCollections;
+
+    setCashOnlineStats({
       cashReceived,
-      checkReceived,
+      gcashReceived,
+      bdoReceived,
+      bpiReceived,
     });
   };
 
-  const fetchCashCheckDetails = async (type: "cash" | "check") => {
+  const fetchCashOnlineDetails = async (type: "cash" | "online") => {
     const periodStart = getPeriodStartDate();
-    const summaryData: TransactionSummary[] = [];
+    const cashData: TransactionSummary[] = [];
+    const onlineData: OnlinePaymentSummary = { gcash: [], bdo: [], bpi: [] };
 
     if (type === "cash") {
-      // Fetch cash transactions with customer and product info
+      // Fetch cash transactions
       const { data: transactions } = await supabase
         .from("transactions")
         .select(`
@@ -217,7 +246,7 @@ const Dashboard = () => {
         .ilike("payment_type", "cash");
 
       transactions?.forEach(t => {
-        summaryData.push({
+        cashData.push({
           id: t.id,
           customer_name: t.customers?.name || "Unknown",
           product_names: t.transaction_items?.map((i: any) => i.product_name) || [],
@@ -227,7 +256,7 @@ const Dashboard = () => {
         });
       });
 
-      // Fetch cash collections with customer and transaction info
+      // Fetch cash collections
       const { data: collections } = await supabase
         .from("collections")
         .select(`
@@ -246,7 +275,7 @@ const Dashboard = () => {
         .ilike("payment_method", "cash");
 
       collections?.forEach(c => {
-        summaryData.push({
+        cashData.push({
           id: c.id,
           customer_name: c.payment_plans?.customers?.name || "Unknown",
           product_names: c.payment_plans?.transactions?.transaction_items?.map((i: any) => i.product_name) || [],
@@ -256,94 +285,85 @@ const Dashboard = () => {
         });
       });
     } else {
-      // Fetch check transactions
-      const { data: transactions } = await supabase
-        .from("transactions")
-        .select(`
-          id,
-          total_amount,
-          created_at,
-          payment_type,
-          customers (name),
-          transaction_items (product_name)
-        `)
-        .gte("created_at", periodStart.toISOString())
-        .ilike("payment_type", "check");
-
-      transactions?.forEach(t => {
-        summaryData.push({
-          id: t.id,
-          customer_name: t.customers?.name || "Unknown",
-          product_names: t.transaction_items?.map((i: any) => i.product_name) || [],
-          amount: Number(t.total_amount),
-          date: t.created_at,
-          source: "transaction"
-        });
-      });
-
-      // Fetch check collections
-      const { data: collections } = await supabase
-        .from("collections")
-        .select(`
-          id,
-          amount_paid,
-          payment_date,
-          payment_method,
-          payment_plans (
+      // Fetch online transactions for each payment method
+      const paymentMethods = ['gcash', 'bdo', 'bpi'];
+      
+      for (const method of paymentMethods) {
+        const { data: transactions } = await supabase
+          .from("transactions")
+          .select(`
+            id,
+            total_amount,
+            created_at,
+            payment_type,
             customers (name),
-            transactions (
-              transaction_items (product_name)
+            transaction_items (product_name)
+          `)
+          .gte("created_at", periodStart.toISOString())
+          .ilike("payment_type", method);
+
+        transactions?.forEach(t => {
+          const item: TransactionSummary = {
+            id: t.id,
+            customer_name: t.customers?.name || "Unknown",
+            product_names: t.transaction_items?.map((i: any) => i.product_name) || [],
+            amount: Number(t.total_amount),
+            date: t.created_at,
+            source: "transaction",
+            payment_method: method
+          };
+          onlineData[method as keyof OnlinePaymentSummary].push(item);
+        });
+
+        const { data: collections } = await supabase
+          .from("collections")
+          .select(`
+            id,
+            amount_paid,
+            payment_date,
+            payment_method,
+            payment_plans (
+              customers (name),
+              transactions (
+                transaction_items (product_name)
+              )
             )
-          )
-        `)
-        .gte("payment_date", periodStart.toISOString())
-        .ilike("payment_method", "check");
+          `)
+          .gte("payment_date", periodStart.toISOString())
+          .ilike("payment_method", method);
 
-      collections?.forEach(c => {
-        summaryData.push({
-          id: c.id,
-          customer_name: c.payment_plans?.customers?.name || "Unknown",
-          product_names: c.payment_plans?.transactions?.transaction_items?.map((i: any) => i.product_name) || [],
-          amount: Number(c.amount_paid),
-          date: c.payment_date,
-          source: "collection"
+        collections?.forEach(c => {
+          const item: TransactionSummary = {
+            id: c.id,
+            customer_name: c.payment_plans?.customers?.name || "Unknown",
+            product_names: c.payment_plans?.transactions?.transaction_items?.map((i: any) => i.product_name) || [],
+            amount: Number(c.amount_paid),
+            date: c.payment_date,
+            source: "collection",
+            payment_method: method
+          };
+          onlineData[method as keyof OnlinePaymentSummary].push(item);
         });
-      });
-
-      // Fetch bank checks
-      const { data: bankChecks } = await supabase
-        .from("bank_checks")
-        .select(`
-          id,
-          amount,
-          date_received,
-          invoice_number,
-          customers (name)
-        `)
-        .gte("date_received", periodStart.toISOString());
-
-      bankChecks?.forEach(bc => {
-        summaryData.push({
-          id: bc.id,
-          customer_name: bc.customers?.name || "Unknown",
-          product_names: bc.invoice_number ? [`Invoice: ${bc.invoice_number}`] : [],
-          amount: Number(bc.amount),
-          date: bc.date_received,
-          source: "bank_check"
-        });
-      });
+      }
     }
 
     // Sort by date descending
-    summaryData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    cashData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    onlineData.gcash.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    onlineData.bdo.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    onlineData.bpi.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const totalAmount = summaryData.reduce((sum, item) => sum + item.amount, 0);
-
-    setCashCheckDialog({
+    setCashOnlineDialog({
       open: true,
       type,
-      data: summaryData,
-      totalAmount
+      cashData,
+      onlineData,
+      totalCash: cashData.reduce((sum, item) => sum + item.amount, 0),
+      totalOnline: {
+        gcash: onlineData.gcash.reduce((sum, item) => sum + item.amount, 0),
+        bdo: onlineData.bdo.reduce((sum, item) => sum + item.amount, 0),
+        bpi: onlineData.bpi.reduce((sum, item) => sum + item.amount, 0),
+      }
     });
   };
 
@@ -510,6 +530,9 @@ const Dashboard = () => {
     },
   ];
 
+  const periodLabel = periodFilter === 'daily' ? 'Today' : periodFilter === 'weekly' ? 'This Week' : 'This Month';
+  const totalOnlinePayments = cashOnlineStats.gcashReceived + cashOnlineStats.bdoReceived + cashOnlineStats.bpiReceived;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
@@ -542,10 +565,10 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Cash & Check Received Section */}
+        {/* Cash & Online Payments Section */}
         <Card className="mb-6 sm:mb-8 border-border/50">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Cash & Check Received</CardTitle>
+            <CardTitle className="text-lg">Cash & Online Payments</CardTitle>
             <Select value={periodFilter} onValueChange={(value: PeriodFilter) => setPeriodFilter(value)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
@@ -558,29 +581,49 @@ const Dashboard = () => {
             </Select>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Cash Column */}
               <div 
                 className="bg-green-500/10 rounded-lg p-4 flex items-center gap-4 cursor-pointer hover:bg-green-500/20 transition-colors"
-                onClick={() => fetchCashCheckDetails("cash")}
+                onClick={() => fetchCashOnlineDetails("cash")}
               >
                 <div className="bg-green-500/20 p-3 rounded-full">
                   <Banknote className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Cash Received ({periodFilter === 'daily' ? 'Today' : periodFilter === 'weekly' ? 'This Week' : 'This Month'})</p>
-                  <p className="text-2xl font-bold text-green-600">₱{cashCheckStats.cashReceived.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Cash Received ({periodLabel})</p>
+                  <p className="text-2xl font-bold text-green-600">₱{cashOnlineStats.cashReceived.toLocaleString()}</p>
                 </div>
               </div>
+
+              {/* Online Payments Column */}
               <div 
-                className="bg-blue-500/10 rounded-lg p-4 flex items-center gap-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
-                onClick={() => fetchCashCheckDetails("check")}
+                className="bg-blue-500/10 rounded-lg p-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
+                onClick={() => fetchCashOnlineDetails("online")}
               >
-                <div className="bg-blue-500/20 p-3 rounded-full">
-                  <CreditCard className="h-6 w-6 text-blue-600" />
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-blue-500/20 p-3 rounded-full">
+                    <Smartphone className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Online Payments ({periodLabel})</p>
+                    <p className="text-2xl font-bold text-blue-600">₱{totalOnlinePayments.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Check Received ({periodFilter === 'daily' ? 'Today' : periodFilter === 'weekly' ? 'This Week' : 'This Month'})</p>
-                  <p className="text-2xl font-bold text-blue-600">₱{cashCheckStats.checkReceived.toLocaleString()}</p>
+                {/* Sub-columns for GCash, BDO, BPI */}
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-blue-500/20">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">GCash</p>
+                    <p className="text-sm font-semibold text-blue-600">₱{cashOnlineStats.gcashReceived.toLocaleString()}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">BDO</p>
+                    <p className="text-sm font-semibold text-orange-600">₱{cashOnlineStats.bdoReceived.toLocaleString()}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">BPI</p>
+                    <p className="text-sm font-semibold text-purple-600">₱{cashOnlineStats.bpiReceived.toLocaleString()}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -598,7 +641,6 @@ const Dashboard = () => {
               ) : (
                 recentSales.map((sale) => {
                   const productName = sale.transaction_items?.[0]?.product_name || "Multiple items";
-                  const customerName = sale.customers?.name || "Unknown";
                   const timeAgo = new Date(sale.created_at).toLocaleTimeString();
 
                   return (
@@ -630,13 +672,15 @@ const Dashboard = () => {
           onPeriodChange={handleTrendPeriodChange}
         />
 
-        <CashCheckSummaryDialog
-          open={cashCheckDialog.open}
-          onOpenChange={(open) => setCashCheckDialog({ ...cashCheckDialog, open })}
-          type={cashCheckDialog.type}
-          data={cashCheckDialog.data}
-          totalAmount={cashCheckDialog.totalAmount}
-          periodLabel={periodFilter === 'daily' ? 'Today' : periodFilter === 'weekly' ? 'This Week' : 'This Month'}
+        <CashOnlinePaymentDialog
+          open={cashOnlineDialog.open}
+          onOpenChange={(open) => setCashOnlineDialog({ ...cashOnlineDialog, open })}
+          type={cashOnlineDialog.type}
+          cashData={cashOnlineDialog.cashData}
+          onlineData={cashOnlineDialog.onlineData}
+          totalCash={cashOnlineDialog.totalCash}
+          totalOnline={cashOnlineDialog.totalOnline}
+          periodLabel={periodLabel}
         />
       </main>
     </div>
