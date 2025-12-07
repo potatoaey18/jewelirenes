@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Upload, Eye, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createAuditLog } from "@/lib/auditLog";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface CartItem {
   id: string;
@@ -28,7 +29,7 @@ interface CheckoutDialogProps {
   onSuccess: () => void;
 }
 
-const PAYMENT_TYPES = ["Cash", "Credit Card", "Debit Card", "Bank Transfer", "Check"];
+const PAYMENT_TYPES = ["Cash", "Credit Card", "Debit Card", "Bank Transfer", "Check", "GCash", "BDO", "BPI"];
 
 export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: CheckoutDialogProps) => {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -43,12 +44,32 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
   const [invoicePreview, setInvoicePreview] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Payment details for non-cash payments
+  const [paymentDetails, setPaymentDetails] = useState({
+    reference_number: "",
+    bank_name: "",
+    account_name: "",
+    check_number: "",
+    check_date: "",
+  });
 
   useEffect(() => {
     if (open) {
       fetchCustomers();
     }
   }, [open]);
+
+  // Reset payment details when payment type changes
+  useEffect(() => {
+    setPaymentDetails({
+      reference_number: "",
+      bank_name: "",
+      account_name: "",
+      check_number: "",
+      check_date: "",
+    });
+  }, [paymentType]);
 
   const fetchCustomers = async () => {
     const { data, error } = await supabase
@@ -71,6 +92,10 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const showPaymentDetailsFields = () => {
+    return ["Check", "Debit Card", "Bank Transfer", "GCash", "BDO", "BPI"].includes(paymentType);
   };
 
   const handleSubmit = async () => {
@@ -134,6 +159,18 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       const tax = (subtotal - discountAmount) * (parseFloat(taxPercentage) / 100);
       const totalAmount = subtotal - discountAmount + tax;
 
+      // Build notes with payment details
+      let notes = "";
+      if (showPaymentDetailsFields()) {
+        const details: string[] = [];
+        if (paymentDetails.reference_number) details.push(`Ref #: ${paymentDetails.reference_number}`);
+        if (paymentDetails.bank_name) details.push(`Bank: ${paymentDetails.bank_name}`);
+        if (paymentDetails.account_name) details.push(`Account: ${paymentDetails.account_name}`);
+        if (paymentDetails.check_number) details.push(`Check #: ${paymentDetails.check_number}`);
+        if (paymentDetails.check_date) details.push(`Check Date: ${paymentDetails.check_date}`);
+        notes = details.join(" | ");
+      }
+
       // Create transaction
       const { data: transaction, error: transactionError } = await supabase
         .from("transactions")
@@ -145,16 +182,17 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
           discount: discountAmount,
           total_amount: totalAmount,
           invoice_image_url: invoiceUrl,
+          notes: notes || null,
         })
         .select("*")
         .single();
 
       if (transactionError) throw transactionError;
 
-      // Create transaction items and update stock
+      // Create transaction items WITHOUT product_id (since finished_items is not linked to products table)
       const items = cart.map((item) => ({
         transaction_id: transaction.id,
-        product_id: item.id,
+        product_id: null, // Set to null since finished_items aren't in products table
         product_name: item.name,
         quantity: item.quantity,
         unit_price: item.price,
@@ -207,6 +245,13 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       setDiscount("0");
       setInvoiceFile(null);
       setInvoicePreview(null);
+      setPaymentDetails({
+        reference_number: "",
+        bank_name: "",
+        account_name: "",
+        check_number: "",
+        check_date: "",
+      });
     } catch (error: any) {
       console.error("Checkout error:", error);
       toast.error(error.message || "Failed to complete sale");
@@ -318,6 +363,109 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Payment Details for non-cash payments */}
+            {showPaymentDetailsFields() && (
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4 space-y-4">
+                  <p className="text-sm font-medium text-muted-foreground">Payment Details</p>
+                  
+                  {paymentType === "Check" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="check_number">Check Number</Label>
+                          <Input
+                            id="check_number"
+                            value={paymentDetails.check_number}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, check_number: e.target.value})}
+                            placeholder="Enter check number"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="check_date">Check Date</Label>
+                          <Input
+                            id="check_date"
+                            type="date"
+                            value={paymentDetails.check_date}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, check_date: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank_name">Bank Name</Label>
+                        <Input
+                          id="bank_name"
+                          value={paymentDetails.bank_name}
+                          onChange={(e) => setPaymentDetails({...paymentDetails, bank_name: e.target.value})}
+                          placeholder="Enter bank name"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {paymentType === "Debit Card" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="reference_number">Transaction Reference Number</Label>
+                      <Input
+                        id="reference_number"
+                        value={paymentDetails.reference_number}
+                        onChange={(e) => setPaymentDetails({...paymentDetails, reference_number: e.target.value})}
+                        placeholder="Enter reference number"
+                      />
+                    </div>
+                  )}
+
+                  {(paymentType === "Bank Transfer" || paymentType === "BDO" || paymentType === "BPI") && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="reference_number">Reference Number</Label>
+                          <Input
+                            id="reference_number"
+                            value={paymentDetails.reference_number}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, reference_number: e.target.value})}
+                            placeholder="Enter reference number"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="account_name">Account Name</Label>
+                          <Input
+                            id="account_name"
+                            value={paymentDetails.account_name}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, account_name: e.target.value})}
+                            placeholder="Enter account name"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {paymentType === "GCash" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="reference_number">GCash Reference Number</Label>
+                        <Input
+                          id="reference_number"
+                          value={paymentDetails.reference_number}
+                          onChange={(e) => setPaymentDetails({...paymentDetails, reference_number: e.target.value})}
+                          placeholder="Enter GCash reference"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="account_name">GCash Account Name</Label>
+                        <Input
+                          id="account_name"
+                          value={paymentDetails.account_name}
+                          onChange={(e) => setPaymentDetails({...paymentDetails, account_name: e.target.value})}
+                          placeholder="Enter account name"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Tax Percentage */}
             <div className="space-y-2">
