@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, Eye, X, Check, ChevronsUpDown } from "lucide-react";
@@ -44,6 +45,10 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
   const [invoicePreview, setInvoicePreview] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Layaway/Installment state
+  const [isLayaway, setIsLayaway] = useState(false);
+  const [downPayment, setDownPayment] = useState("");
   
   // Payment details for non-cash payments
   const [paymentDetails, setPaymentDetails] = useState({
@@ -98,6 +103,16 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
     return ["Check", "Debit Card", "Bank Transfer", "GCash", "BDO", "BPI"].includes(paymentType);
   };
 
+  // Calculate totals
+  const subtotal = total;
+  const discountPercentage = parseFloat(discount) || 0;
+  const discountAmount = subtotal * (discountPercentage / 100);
+  const taxValue = parseFloat(taxPercentage) || 0;
+  const tax = (subtotal - discountAmount) * (taxValue / 100);
+  const totalAmount = subtotal - discountAmount + tax;
+  const downPaymentAmount = parseFloat(downPayment) || 0;
+  const balance = isLayaway ? totalAmount - downPaymentAmount : 0;
+
   const handleSubmit = async () => {
     // Validate customer
     if (!selectedCustomerId && !newCustomerName.trim()) {
@@ -108,10 +123,19 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       toast.error("Please select payment type");
       return;
     }
-    const taxValue = parseFloat(taxPercentage);
-    if (isNaN(taxValue) || taxValue < 0 || taxValue > 100) {
+    if (taxValue < 0 || taxValue > 100) {
       toast.error("Please enter a valid tax percentage (0-100)");
       return;
+    }
+    if (isLayaway) {
+      if (downPaymentAmount <= 0) {
+        toast.error("Please enter a valid down payment amount");
+        return;
+      }
+      if (downPaymentAmount >= totalAmount) {
+        toast.error("Down payment must be less than total amount. For full payment, disable Layaway.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -152,13 +176,6 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
         invoiceUrl = publicUrl;
       }
 
-      // Calculate tax and total
-      const subtotal = total;
-      const discountPercentage = parseFloat(discount) || 0;
-      const discountAmount = subtotal * (discountPercentage / 100);
-      const tax = (subtotal - discountAmount) * (parseFloat(taxPercentage) / 100);
-      const totalAmount = subtotal - discountAmount + tax;
-
       // Build notes with payment details
       let notes = "";
       if (showPaymentDetailsFields()) {
@@ -171,12 +188,16 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
         notes = details.join(" | ");
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       // Create transaction
       const { data: transaction, error: transactionError } = await supabase
         .from("transactions")
         .insert({
           customer_id: customerId,
-          transaction_type: "sale",
+          transaction_type: isLayaway ? "layaway" : "sale",
           payment_type: paymentType,
           tax,
           discount: discountAmount,
@@ -192,7 +213,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       // Create transaction items WITHOUT product_id (since finished_items is not linked to products table)
       const items = cart.map((item) => ({
         transaction_id: transaction.id,
-        product_id: null, // Set to null since finished_items aren't in products table
+        product_id: null,
         product_name: item.name,
         quantity: item.quantity,
         unit_price: item.price,
@@ -204,6 +225,47 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
         .insert(items);
 
       if (itemsError) throw itemsError;
+
+      // If layaway, create payment plan and initial collection
+      if (isLayaway) {
+        // Create payment plan
+        const { data: paymentPlan, error: planError } = await supabase
+          .from("payment_plans")
+          .insert({
+            customer_id: customerId,
+            transaction_id: transaction.id,
+            total_amount: totalAmount,
+            amount_paid: downPaymentAmount,
+            balance: balance,
+            status: "active",
+            created_by: user.id,
+          })
+          .select("*")
+          .single();
+
+        if (planError) throw planError;
+
+        // Create initial collection (down payment)
+        const { error: collectionError } = await supabase
+          .from("collections")
+          .insert({
+            payment_plan_id: paymentPlan.id,
+            amount_paid: downPaymentAmount,
+            payment_date: new Date().toISOString(),
+            payment_method: paymentType,
+            notes: "Initial down payment",
+            created_by: user.id,
+          });
+
+        if (collectionError) throw collectionError;
+
+        await createAuditLog('CREATE', 'payment_plans', paymentPlan.id, undefined, {
+          customer_id: customerId,
+          total_amount: totalAmount,
+          down_payment: downPaymentAmount,
+          balance: balance
+        });
+      }
 
       // Decrease stock for each finished item
       for (const item of cart) {
@@ -229,10 +291,11 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
         customer_id: customerId,
         total_amount: transaction.total_amount,
         payment_type: paymentType,
-        items: cart.length
+        items: cart.length,
+        is_layaway: isLayaway
       });
 
-      toast.success("Sale completed successfully!");
+      toast.success(isLayaway ? "Layaway sale completed successfully!" : "Sale completed successfully!");
       onSuccess();
       onOpenChange(false);
       
@@ -245,6 +308,8 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
       setDiscount("0");
       setInvoiceFile(null);
       setInvoicePreview(null);
+      setIsLayaway(false);
+      setDownPayment("");
       setPaymentDetails({
         reference_number: "",
         bank_name: "",
@@ -346,6 +411,58 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                 </div>
               )}
             </div>
+
+            {/* Layaway Toggle */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-semibold">Layaway / Installment</Label>
+                    <p className="text-sm text-muted-foreground">Enable to set up a payment plan with down payment</p>
+                  </div>
+                  <Switch
+                    checked={isLayaway}
+                    onCheckedChange={setIsLayaway}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Down Payment (shown when layaway is enabled) */}
+            {isLayaway && (
+              <Card className="bg-accent/5 border-accent/20">
+                <CardContent className="py-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="downPayment">Down Payment (₱) *</Label>
+                    <Input
+                      id="downPayment"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={downPayment}
+                      onChange={(e) => setDownPayment(e.target.value)}
+                      placeholder="Enter down payment amount"
+                    />
+                  </div>
+                  {downPaymentAmount > 0 && (
+                    <div className="text-sm space-y-1 pt-2 border-t border-accent/20">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Amount:</span>
+                        <span className="font-medium">₱{totalAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Down Payment:</span>
+                        <span className="font-medium text-green-600">₱{downPaymentAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-base font-semibold">
+                        <span>Remaining Balance:</span>
+                        <span className="text-orange-600">₱{balance.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Payment Type */}
             <div className="space-y-2">
@@ -573,22 +690,34 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
             <div className="border-t border-border pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>₱{total.toLocaleString()}</span>
+                <span>₱{subtotal.toLocaleString()}</span>
               </div>
-              {parseFloat(discount) > 0 && (
+              {discountPercentage > 0 && (
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Discount ({discount}%)</span>
-                  <span>-₱{(total * (parseFloat(discount) / 100)).toLocaleString()}</span>
+                  <span>-₱{discountAmount.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Tax ({taxPercentage}%)</span>
-                <span>₱{((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100)).toLocaleString()}</span>
+                <span>₱{tax.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-accent border-t border-border pt-2">
                 <span>Total</span>
-                <span>₱{(total - (total * (parseFloat(discount) / 100)) + ((total - (total * (parseFloat(discount) / 100))) * (parseFloat(taxPercentage) / 100))).toLocaleString()}</span>
+                <span>₱{totalAmount.toLocaleString()}</span>
               </div>
+              {isLayaway && downPaymentAmount > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Down Payment</span>
+                    <span>-₱{downPaymentAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold text-orange-600">
+                    <span>Balance Due</span>
+                    <span>₱{balance.toLocaleString()}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -597,7 +726,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={loading} className="bg-accent hover:bg-accent/90">
-              {loading ? "Processing..." : "Complete Sale"}
+              {loading ? "Processing..." : isLayaway ? "Complete Layaway" : "Complete Sale"}
             </Button>
           </DialogFooter>
         </DialogContent>
