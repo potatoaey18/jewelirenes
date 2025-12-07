@@ -10,10 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Search, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
+import { VendorDirectory } from '@/components/expenses/VendorDirectory';
+import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { formatCurrencyForPDF } from '@/lib/pdfUtils';
 
 export default function Expenses() {
   const { user } = useAuth();
@@ -80,6 +86,36 @@ export default function Expenses() {
   );
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Expenses Report", 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Total Expenses: ${formatCurrencyForPDF(totalExpenses)}`, 14, 38);
+    
+    const tableData = filteredExpenses.map((expense) => [
+      new Date(expense.expense_date).toLocaleDateString(),
+      expense.description || '-',
+      expense.category || '-',
+      expense.vendor || '-',
+      expense.payment_method || '-',
+      formatCurrencyForPDF(expense.amount)
+    ]);
+    
+    autoTable(doc, {
+      head: [["Date", "Description", "Category", "Vendor", "Payment Method", "Amount"]],
+      body: tableData,
+      startY: 45,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 175, 55] }
+    });
+    
+    doc.save(`expenses-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("PDF exported successfully");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,6 +200,9 @@ export default function Expenses() {
                         <SelectItem value="Debit Card">Debit Card</SelectItem>
                         <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                         <SelectItem value="Check">Check</SelectItem>
+                        <SelectItem value="GCash">GCash</SelectItem>
+                        <SelectItem value="BDO">BDO</SelectItem>
+                        <SelectItem value="BPI">BPI</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -201,46 +240,68 @@ export default function Expenses() {
           </div>
         </Card>
 
-        <Card className="p-6 sm:p-8">
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-              <Input
-                placeholder="Search expenses..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-12 h-14 text-base"
-              />
-            </div>
-          </div>
+        <Tabs defaultValue="expenses" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="vendors">Vendor Directory</TabsTrigger>
+            <TabsTrigger value="bank-checks">Bank Checks</TabsTrigger>
+          </TabsList>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="text-base">
-                  <TableHead className="text-base font-semibold">Date</TableHead>
-                  <TableHead className="text-base font-semibold">Description</TableHead>
-                  <TableHead className="text-base font-semibold">Category</TableHead>
-                  <TableHead className="text-base font-semibold">Vendor</TableHead>
-                  <TableHead className="text-base font-semibold">Payment Method</TableHead>
-                  <TableHead className="text-right text-base font-semibold">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExpenses.map((expense) => (
-                  <TableRow key={expense.id} className="text-base">
-                    <TableCell className="py-4">{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
-                    <TableCell className="py-4">{expense.description}</TableCell>
-                    <TableCell className="py-4">{expense.category}</TableCell>
-                    <TableCell className="py-4">{expense.vendor}</TableCell>
-                    <TableCell className="py-4">{expense.payment_method}</TableCell>
-                    <TableCell className="text-right font-semibold py-4 text-lg">₱{Number(expense.amount).toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+          <TabsContent value="expenses">
+            <Card className="p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                  <Input
+                    placeholder="Search expenses..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-12 h-14 text-base"
+                  />
+                </div>
+                <Button variant="outline" onClick={handleExportPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="text-base">
+                      <TableHead className="text-base font-semibold">Date</TableHead>
+                      <TableHead className="text-base font-semibold">Description</TableHead>
+                      <TableHead className="text-base font-semibold">Category</TableHead>
+                      <TableHead className="text-base font-semibold">Vendor</TableHead>
+                      <TableHead className="text-base font-semibold">Payment Method</TableHead>
+                      <TableHead className="text-right text-base font-semibold">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredExpenses.map((expense) => (
+                      <TableRow key={expense.id} className="text-base">
+                        <TableCell className="py-4">{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="py-4">{expense.description}</TableCell>
+                        <TableCell className="py-4">{expense.category}</TableCell>
+                        <TableCell className="py-4">{expense.vendor}</TableCell>
+                        <TableCell className="py-4">{expense.payment_method}</TableCell>
+                        <TableCell className="text-right font-semibold py-4 text-lg">₱{Number(expense.amount).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="vendors">
+            <VendorDirectory expenses={expenses} />
+          </TabsContent>
+
+          <TabsContent value="bank-checks">
+            <ExpenseBankChecks />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
