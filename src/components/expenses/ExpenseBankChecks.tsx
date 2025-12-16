@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 
 interface ExpenseBankCheck {
   id: string;
@@ -67,6 +68,31 @@ export function ExpenseBankChecks() {
       return data as ExpenseBankCheck[];
     }
   });
+
+  // Fetch expenses to get unique vendors
+  const { data: expenses = [] } = useQuery({
+    queryKey: ['expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('vendor')
+        .not('vendor', 'is', null);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get unique vendors for suggestions
+  const uniqueVendors = useMemo(() => {
+    const vendors = new Set<string>();
+    expenses.forEach(exp => {
+      if (exp.vendor) vendors.add(exp.vendor);
+    });
+    bankChecks.forEach(check => {
+      if (check.vendor) vendors.add(check.vendor);
+    });
+    return Array.from(vendors).sort();
+  }, [expenses, bankChecks]);
 
   const createBankCheck = useMutation({
     mutationFn: async (data: any) => {
@@ -326,11 +352,13 @@ export function ExpenseBankChecks() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="vendor">Vendor Name *</Label>
-                    <Input
+                    <VendorSearchInput
                       id="vendor"
-                      required
                       value={formData.vendor}
-                      onChange={(e) => setFormData({...formData, vendor: e.target.value})}
+                      onChange={(value) => setFormData({...formData, vendor: value})}
+                      vendors={uniqueVendors}
+                      placeholder="Search or enter vendor..."
+                      required
                     />
                   </div>
                   <div>
