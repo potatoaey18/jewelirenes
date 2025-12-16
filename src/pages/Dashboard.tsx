@@ -6,6 +6,7 @@ import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendDialog } from "@/components/dashboard/TrendDialog";
 import { CashCheckSummaryDialog } from "@/components/dashboard/CashCheckSummaryDialog";
+import { CashOnlinePaymentDialog } from "@/components/dashboard/CashOnlinePaymentDialog";
 import { useNavigate } from "react-router-dom";
 import { format, startOfDay, startOfWeek, startOfMonth, subDays, subYears } from "date-fns";
 
@@ -49,9 +50,10 @@ const Dashboard = () => {
   }>({ open: false, title: "", data: [], period: "weekly" });
   const [detailDialog, setDetailDialog] = useState<{
     open: boolean;
-    type: "cash" | "check";
+    type: "cash" | "check" | "online";
     data: TransactionSummary[];
     totalAmount: number;
+    onlineData?: { gcash: TransactionSummary[]; bdo: TransactionSummary[]; bpi: TransactionSummary[] };
   }>({ open: false, type: "cash", data: [], totalAmount: 0 });
   const navigate = useNavigate();
 
@@ -231,11 +233,83 @@ const Dashboard = () => {
     });
   };
 
-  const fetchPaymentDetails = async (type: "cash" | "check" | "online", subType?: string) => {
+  const fetchPaymentDetails = async (type: "cash" | "check" | "online") => {
     const periodStart = getPeriodStartDate();
     const summaryData: TransactionSummary[] = [];
 
-    const paymentFilter = type === "online" ? subType : type;
+    if (type === "online") {
+      // Fetch all online payment types separately
+      const onlineData = { gcash: [] as TransactionSummary[], bdo: [] as TransactionSummary[], bpi: [] as TransactionSummary[] };
+      
+      for (const paymentMethod of ["gcash", "bdo", "bpi"]) {
+        const { data: transactions } = await supabase
+          .from("transactions")
+          .select(`
+            id,
+            total_amount,
+            created_at,
+            payment_type,
+            customers (name),
+            transaction_items (product_name)
+          `)
+          .gte("created_at", periodStart.toISOString())
+          .ilike("payment_type", paymentMethod);
+
+        transactions?.forEach(t => {
+          onlineData[paymentMethod as keyof typeof onlineData].push({
+            id: t.id,
+            customer_name: t.customers?.name || "Unknown",
+            product_names: t.transaction_items?.map((i: any) => i.product_name) || [],
+            amount: Number(t.total_amount),
+            date: t.created_at,
+            source: "transaction"
+          });
+        });
+
+        const { data: collections } = await supabase
+          .from("collections")
+          .select(`
+            id,
+            amount_paid,
+            payment_date,
+            payment_method,
+            payment_plans (
+              customers (name),
+              transactions (
+                transaction_items (product_name)
+              )
+            )
+          `)
+          .gte("payment_date", periodStart.toISOString())
+          .ilike("payment_method", paymentMethod);
+
+        collections?.forEach(c => {
+          onlineData[paymentMethod as keyof typeof onlineData].push({
+            id: c.id,
+            customer_name: c.payment_plans?.customers?.name || "Unknown",
+            product_names: c.payment_plans?.transactions?.transaction_items?.map((i: any) => i.product_name) || [],
+            amount: Number(c.amount_paid),
+            date: c.payment_date,
+            source: "collection"
+          });
+        });
+      }
+
+      const totalAmount = onlineData.gcash.reduce((s, i) => s + i.amount, 0) +
+                          onlineData.bdo.reduce((s, i) => s + i.amount, 0) +
+                          onlineData.bpi.reduce((s, i) => s + i.amount, 0);
+
+      setDetailDialog({
+        open: true,
+        type: "online",
+        data: [],
+        totalAmount,
+        onlineData
+      });
+      return;
+    }
+
+    const paymentFilter = type;
 
     // Fetch transactions
     const { data: transactions } = await supabase
@@ -249,7 +323,7 @@ const Dashboard = () => {
         transaction_items (product_name)
       `)
       .gte("created_at", periodStart.toISOString())
-      .ilike("payment_type", paymentFilter || "");
+      .ilike("payment_type", paymentFilter);
 
     transactions?.forEach(t => {
       summaryData.push({
@@ -278,7 +352,7 @@ const Dashboard = () => {
         )
       `)
       .gte("payment_date", periodStart.toISOString())
-      .ilike("payment_method", paymentFilter || "");
+      .ilike("payment_method", paymentFilter);
 
     collections?.forEach(c => {
       summaryData.push({
@@ -561,7 +635,7 @@ const Dashboard = () => {
               {/* Online Payments Column */}
               <div 
                 className="bg-blue-500/10 rounded-lg p-3 sm:p-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
-                onClick={() => fetchPaymentDetails("online", "gcash")}
+                onClick={() => fetchPaymentDetails("online")}
               >
                 <div className="flex items-center gap-3 sm:gap-4 mb-3">
                   <div className="bg-blue-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
@@ -648,14 +722,31 @@ const Dashboard = () => {
           onPeriodChange={handleTrendPeriodChange}
         />
 
-        <CashCheckSummaryDialog
-          open={detailDialog.open}
-          onOpenChange={(open) => setDetailDialog({ ...detailDialog, open })}
-          type={detailDialog.type}
-          data={detailDialog.data}
-          totalAmount={detailDialog.totalAmount}
-          periodLabel={periodLabel}
-        />
+        {detailDialog.type !== "online" ? (
+          <CashCheckSummaryDialog
+            open={detailDialog.open}
+            onOpenChange={(open) => setDetailDialog({ ...detailDialog, open })}
+            type={detailDialog.type as "cash" | "check"}
+            data={detailDialog.data}
+            totalAmount={detailDialog.totalAmount}
+            periodLabel={periodLabel}
+          />
+        ) : (
+          <CashOnlinePaymentDialog
+            open={detailDialog.open}
+            onOpenChange={(open) => setDetailDialog({ ...detailDialog, open })}
+            type="online"
+            cashData={[]}
+            onlineData={detailDialog.onlineData || { gcash: [], bdo: [], bpi: [] }}
+            totalCash={0}
+            totalOnline={{
+              gcash: detailDialog.onlineData?.gcash.reduce((s, i) => s + i.amount, 0) || 0,
+              bdo: detailDialog.onlineData?.bdo.reduce((s, i) => s + i.amount, 0) || 0,
+              bpi: detailDialog.onlineData?.bpi.reduce((s, i) => s + i.amount, 0) || 0,
+            }}
+            periodLabel={periodLabel}
+          />
+        )}
       </main>
     </div>
   );
