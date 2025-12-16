@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createAuditLog } from "@/lib/auditLog";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
-import { CsvImport } from "@/components/CsvImport";
+import { CsvImport, CsvSampleDownload } from "@/components/CsvImport";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -278,6 +278,22 @@ const Customers = () => {
             <p className="text-sm sm:text-base text-muted-foreground">Manage your client relationships</p>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <CsvSampleDownload
+              title="Import Customers"
+              columns={[
+                { key: "name", label: "Customer Name", required: true },
+                { key: "email", label: "Email Address" },
+                { key: "phone", label: "Phone Number" },
+                { key: "address", label: "Full Address" },
+                { key: "location", label: "Location/City" },
+                { key: "tier", label: "Tier (VIP/Gold/Silver)" },
+                { key: "notes", label: "Notes" },
+              ]}
+              sampleData={[
+                { name: "Maria Santos", email: "maria@email.com", phone: "09171234567", address: "123 Main St, Manila", location: "Manila", tier: "Gold", notes: "Regular customer" },
+                { name: "Jose Reyes", email: "jose@email.com", phone: "09181234567", address: "456 Oak Ave, Cebu", location: "Cebu", tier: "Silver", notes: "" },
+              ]}
+            />
             <CsvImport
               title="Import Customers"
               columns={[

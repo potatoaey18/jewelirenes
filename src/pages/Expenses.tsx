@@ -19,7 +19,7 @@ import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
-import { CsvImport } from '@/components/CsvImport';
+import { CsvImport, CsvSampleDownload } from '@/components/CsvImport';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
@@ -223,6 +223,22 @@ export default function Expenses() {
                 className="pl-10 sm:pl-12 h-10 sm:h-12 text-sm sm:text-base"
               />
             </div>
+            <CsvSampleDownload
+              title="Import Expenses"
+              columns={[
+                { key: "amount", label: "Amount", required: true },
+                { key: "expense_date", label: "Date (YYYY-MM-DD)", required: true },
+                { key: "category", label: "Category", required: true },
+                { key: "vendor", label: "Vendor Name" },
+                { key: "description", label: "Description" },
+                { key: "payment_method", label: "Payment Method" },
+                { key: "notes", label: "Notes" },
+              ]}
+              sampleData={[
+                { amount: "5000", expense_date: "2024-01-15", category: "Supplies", vendor: "ABC Supplies", description: "Office supplies", payment_method: "Cash", notes: "Monthly restock" },
+                { amount: "15000", expense_date: "2024-01-20", category: "Utilities", vendor: "Electric Company", description: "Electric bill", payment_method: "Bank Transfer", notes: "" },
+              ]}
+            />
             <CsvImport
               title="Import Expenses"
               columns={[

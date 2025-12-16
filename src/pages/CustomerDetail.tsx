@@ -237,17 +237,24 @@ const CustomerDetail = () => {
     
     autoTable(doc, {
       startY: yPos,
-      head: [["Date", "Type", "Amount", "Status"]],
+      head: [["Date", "Items", "Type", "Amount", "Status"]],
       body: exportTransactions.map((transaction: any) => {
         const plan = paymentPlans.find(p => p.transaction_id === transaction.id);
         const status = !plan ? "Paid" : plan.balance > 0 ? "Unpaid" : "Paid";
+        const itemNames = transaction.transaction_items?.map((item: any) => 
+          `${item.product_name} x${item.quantity}`
+        ).join(", ") || "-";
         return [
           format(new Date(transaction.created_at), "PP"),
+          itemNames,
           transaction.transaction_type,
           formatCurrencyForPDF(transaction.total_amount),
           status,
         ];
       }),
+      columnStyles: {
+        1: { cellWidth: 50 }, // Items column wider
+      },
     });
     
     const finalY = (doc as any).lastAutoTable?.finalY || yPos + 20;
