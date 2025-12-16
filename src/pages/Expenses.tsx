@@ -5,7 +5,6 @@ import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +18,7 @@ import { VendorDirectory } from '@/components/expenses/VendorDirectory';
 import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
@@ -457,39 +457,31 @@ export default function Expenses() {
                 </Button>
               </div>
 
-              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="text-base">
-                      <TableHead className="text-base font-semibold">Date</TableHead>
-                      <TableHead className="text-base font-semibold">Description</TableHead>
-                      <TableHead className="text-base font-semibold">Category</TableHead>
-                      <TableHead className="text-base font-semibold">Vendor</TableHead>
-                      <TableHead className="text-base font-semibold">Payment Method</TableHead>
-                      <TableHead className="text-right text-base font-semibold">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredExpenses.map((expense) => (
-                      <TableRow 
-                        key={expense.id} 
-                        className="text-base cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => {
-                          setSelectedExpense(expense);
-                          setDetailDialogOpen(true);
-                        }}
-                      >
-                        <TableCell className="py-4">{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
-                        <TableCell className="py-4">{expense.description}</TableCell>
-                        <TableCell className="py-4">{expense.category}</TableCell>
-                        <TableCell className="py-4">{expense.vendor}</TableCell>
-                        <TableCell className="py-4">{expense.payment_method}</TableCell>
-                        <TableCell className="text-right font-semibold py-4 text-lg">₱{Number(expense.amount).toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'expense_date',
+                    label: 'Date',
+                    render: (value: string) => new Date(value).toLocaleDateString()
+                  },
+                  { key: 'description', label: 'Description' },
+                  { key: 'category', label: 'Category' },
+                  { key: 'vendor', label: 'Vendor' },
+                  { key: 'payment_method', label: 'Payment' },
+                  {
+                    key: 'amount',
+                    label: 'Amount',
+                    className: 'text-right font-semibold',
+                    render: (value: number) => `₱${Number(value).toLocaleString()}`
+                  }
+                ]}
+                data={filteredExpenses}
+                onRowClick={(expense) => {
+                  setSelectedExpense(expense);
+                  setDetailDialogOpen(true);
+                }}
+                emptyMessage="No expenses found"
+              />
             </Card>
           </TabsContent>
 

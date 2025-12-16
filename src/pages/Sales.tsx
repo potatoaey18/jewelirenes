@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckoutDialog } from "@/components/pos/CheckoutDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CartItem {
   id: string;
@@ -57,6 +58,7 @@ interface Transaction {
 }
 
 const Sales = () => {
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
@@ -403,67 +405,105 @@ const Sales = () => {
           <TabsContent value="sold">
             <Card className="p-3 sm:p-6">
               <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Sold Items</h2>
-              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {soldTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{new Date(transaction.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-medium">{transaction.customers?.name || 'Unknown'}</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
+              
+              {/* Mobile Card View */}
+              {isMobile ? (
+                <div className="space-y-3">
+                  {soldTransactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No sold items yet</div>
+                  ) : (
+                    soldTransactions.map((transaction) => (
+                      <Card key={transaction.id} className="overflow-hidden">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold">{transaction.customers?.name || 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(transaction.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">{transaction.payment_type || 'Cash'}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
                             {transaction.transaction_items?.slice(0, 2).map((item, idx) => (
-                              <div key={idx} className="text-sm">
-                                {item.quantity}x {item.product_name}
-                              </div>
+                              <div key={idx}>{item.quantity}x {item.product_name}</div>
                             ))}
                             {transaction.transaction_items?.length > 2 && (
-                              <span className="text-xs text-muted-foreground">
-                                +{transaction.transaction_items.length - 2} more
-                              </span>
+                              <span className="text-xs">+{transaction.transaction_items.length - 2} more</span>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{transaction.payment_type || 'Cash'}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ₱{Number(transaction.total_amount).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTransaction(transaction);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {soldTransactions.length === 0 && (
+                          <div className="flex justify-between items-center pt-2 border-t">
+                            <span className="font-bold text-accent">₱{Number(transaction.total_amount).toLocaleString()}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              ) : (
+                /* Desktop Table View */
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No sold items yet
-                        </TableCell>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {soldTransactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell>{new Date(transaction.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium">{transaction.customers?.name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {transaction.transaction_items?.slice(0, 2).map((item, idx) => (
+                                <div key={idx} className="text-sm">{item.quantity}x {item.product_name}</div>
+                              ))}
+                              {transaction.transaction_items?.length > 2 && (
+                                <span className="text-xs text-muted-foreground">+{transaction.transaction_items.length - 2} more</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{transaction.payment_type || 'Cash'}</Badge></TableCell>
+                          <TableCell className="text-right font-semibold">₱{Number(transaction.total_amount).toLocaleString()}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {soldTransactions.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No sold items yet</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </Card>
           </TabsContent>
 
@@ -477,74 +517,117 @@ const Sales = () => {
               <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
                 Deleted transactions can be restored or permanently deleted.
               </p>
-              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Deleted On</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deletedTransactions.map((transaction) => (
-                      <TableRow key={transaction.id} className="opacity-75">
-                        <TableCell>{new Date(transaction.deleted_at!).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-medium">{transaction.customers?.name || 'Unknown'}</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
+              
+              {/* Mobile Card View */}
+              {isMobile ? (
+                <div className="space-y-3">
+                  {deletedTransactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">Bin is empty</div>
+                  ) : (
+                    deletedTransactions.map((transaction) => (
+                      <Card key={transaction.id} className="overflow-hidden opacity-75">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold">{transaction.customers?.name || 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Deleted: {new Date(transaction.deleted_at!).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
                             {transaction.transaction_items?.slice(0, 2).map((item, idx) => (
-                              <div key={idx} className="text-sm">
-                                {item.quantity}x {item.product_name}
-                              </div>
+                              <div key={idx}>{item.quantity}x {item.product_name}</div>
                             ))}
                             {transaction.transaction_items?.length > 2 && (
-                              <span className="text-xs text-muted-foreground">
-                                +{transaction.transaction_items.length - 2} more
-                              </span>
+                              <span className="text-xs">+{transaction.transaction_items.length - 2} more</span>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ₱{Number(transaction.total_amount).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => restoreMutation.mutate(transaction.id)}
-                              title="Restore"
-                            >
-                              <RotateCcw className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedTransaction(transaction);
-                                setPermanentDeleteDialogOpen(true);
-                              }}
-                              title="Delete permanently"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                          <div className="flex justify-between items-center pt-2 border-t">
+                            <span className="font-bold">₱{Number(transaction.total_amount).toLocaleString()}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => restoreMutation.mutate(transaction.id)}
+                              >
+                                <RotateCcw className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTransaction(transaction);
+                                  setPermanentDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {deletedTransactions.length === 0 && (
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              ) : (
+                /* Desktop Table View */
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          Bin is empty
-                        </TableCell>
+                        <TableHead>Deleted On</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {deletedTransactions.map((transaction) => (
+                        <TableRow key={transaction.id} className="opacity-75">
+                          <TableCell>{new Date(transaction.deleted_at!).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium">{transaction.customers?.name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {transaction.transaction_items?.slice(0, 2).map((item, idx) => (
+                                <div key={idx} className="text-sm">{item.quantity}x {item.product_name}</div>
+                              ))}
+                              {transaction.transaction_items?.length > 2 && (
+                                <span className="text-xs text-muted-foreground">+{transaction.transaction_items.length - 2} more</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">₱{Number(transaction.total_amount).toLocaleString()}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => restoreMutation.mutate(transaction.id)} title="Restore">
+                                <RotateCcw className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTransaction(transaction);
+                                  setPermanentDeleteDialogOpen(true);
+                                }}
+                                title="Delete permanently"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {deletedTransactions.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Bin is empty</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>

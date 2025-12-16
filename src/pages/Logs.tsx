@@ -4,11 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import Navigation from '@/components/Navigation';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 
 export default function Logs() {
   const { user, isAdmin } = useAuth();
@@ -56,6 +56,44 @@ export default function Logs() {
     return moduleMap[tableName] || tableName;
   };
 
+  const columns = [
+    {
+      key: 'created_at',
+      label: 'Date & Time',
+      render: (value: string) => new Date(value).toLocaleString()
+    },
+    {
+      key: 'user_email',
+      label: 'User'
+    },
+    {
+      key: 'action',
+      label: 'Action',
+      render: (value: string) => (
+        <Badge variant={
+          value === 'CREATE' ? 'default' :
+          value === 'UPDATE' ? 'secondary' :
+          value === 'DELETE' ? 'destructive' :
+          'outline'
+        }>
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'table_name',
+      label: 'Module',
+      render: (value: string) => (
+        <Badge variant="outline">{getModuleName(value)}</Badge>
+      )
+    },
+    {
+      key: 'id',
+      label: 'Details',
+      render: () => <FileText className="h-4 w-4 text-muted-foreground" />
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -80,50 +118,15 @@ export default function Logs() {
             </div>
           </div>
 
-          <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Module</TableHead>
-                  <TableHead>Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs.map((log) => (
-                  <TableRow 
-                    key={log.id}
-                    className="cursor-pointer hover:bg-accent/50"
-                    onClick={() => {
-                      setSelectedLog(log);
-                      setDetailsOpen(true);
-                    }}
-                  >
-                    <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
-                    <TableCell>{log.user_email}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        log.action === 'CREATE' ? 'default' :
-                        log.action === 'UPDATE' ? 'secondary' :
-                        log.action === 'DELETE' ? 'destructive' :
-                        'outline'
-                      }>
-                        {log.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{getModuleName(log.table_name)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ResponsiveTable
+            columns={columns}
+            data={filteredLogs}
+            onRowClick={(log) => {
+              setSelectedLog(log);
+              setDetailsOpen(true);
+            }}
+            emptyMessage="No logs found"
+          />
         </Card>
 
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>

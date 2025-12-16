@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen, LogOut, DollarSign, Wallet, FileText, Menu, X } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen, LogOut, DollarSign, Wallet, FileText, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Navigation = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -91,16 +92,20 @@ const Navigation = () => {
             <div className="flex gap-1">
               <NavLinks />
             </div>
-            {user && (
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-2">
-                <LogOut className="h-5 w-5" />
-                <span className="hidden xl:inline ml-2">Logout</span>
-              </Button>
-            )}
+            <div className="flex items-center gap-1 ml-2">
+              <ThemeToggle />
+              {user && (
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-5 w-5" />
+                  <span className="hidden xl:inline ml-2">Logout</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-1">
+            <ThemeToggle />
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-10 w-10">
