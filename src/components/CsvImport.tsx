@@ -19,6 +19,50 @@ interface CsvImportProps {
   description?: string;
 }
 
+// Standalone function to generate and download CSV
+const generateSampleCsv = (
+  columns: { key: string; label: string; required?: boolean }[],
+  sampleData: Record<string, string>[],
+  title: string
+) => {
+  const headers = columns.map(c => c.key).join(",");
+  const rows = sampleData.map(row => 
+    columns.map(c => {
+      const value = row[c.key] || "";
+      if (value.includes(",") || value.includes('"')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }).join(",")
+  ).join("\n");
+  
+  const csv = `${headers}\n${rows}`;
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.toLowerCase().replace(/\s+/g, "-")}-sample.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast.success("Sample CSV downloaded");
+};
+
+// Export a separate button component for downloading sample
+export function CsvSampleDownload({ columns, sampleData, title }: Omit<CsvImportProps, 'onImport' | 'description'>) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => generateSampleCsv(columns, sampleData, title)}
+    >
+      <Download className="h-4 w-4 mr-2" />
+      Sample Format
+    </Button>
+  );
+}
+
 export function CsvImport({ onImport, sampleData, columns, title, description }: CsvImportProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -27,29 +71,7 @@ export function CsvImport({ onImport, sampleData, columns, title, description }:
   const [importing, setImporting] = useState(false);
 
   const downloadSample = () => {
-    const headers = columns.map(c => c.key).join(",");
-    const rows = sampleData.map(row => 
-      columns.map(c => {
-        const value = row[c.key] || "";
-        // Escape values with commas or quotes
-        if (value.includes(",") || value.includes('"')) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value;
-      }).join(",")
-    ).join("\n");
-    
-    const csv = `${headers}\n${rows}`;
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title.toLowerCase().replace(/\s+/g, "-")}-sample.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Sample CSV downloaded");
+    generateSampleCsv(columns, sampleData, title);
   };
 
   const parseCSV = (text: string): any[] => {
