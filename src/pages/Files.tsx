@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { FolderPlus, FilePlus, Upload, Trash2, Folder, File, Download, Eye } from "lucide-react";
+import { FolderPlus, Upload, Trash2, Folder, File, Download, Eye, Users, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +31,73 @@ const Files = () => {
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: "folder" | "file"; id: string; storagePath?: string } | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+
+  // Fetch customers for client files tab
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers-files'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch customer files
+  const { data: customerFiles = [] } = useQuery({
+    queryKey: ['customer-files-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customer_files')
+        .select(`
+          *,
+          customers(name),
+          files(*)
+        `);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch unique vendors from expenses
+  const { data: vendors = [] } = useQuery({
+    queryKey: ['vendors-files'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('vendor')
+        .not('vendor', 'is', null);
+      if (error) throw error;
+      
+      // Get unique vendors
+      const uniqueVendors = [...new Set(data.map(e => e.vendor).filter(Boolean))];
+      return uniqueVendors.sort();
+    }
+  });
+
+  // Fetch vendor files
+  const { data: vendorFiles = [] } = useQuery({
+    queryKey: ['vendor-files-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendor_files')
+        .select(`
+          *,
+          files(*)
+        `);
+      if (error) throw error;
+      return data;
+    }
+  });
 
   useEffect(() => {
-    fetchData();
-  }, [currentFolder]);
+    if (activeTab === "all") {
+      fetchData();
+    }
+  }, [currentFolder, activeTab]);
 
   const fetchData = async () => {
     try {
@@ -195,6 +260,24 @@ const Files = () => {
     }
   };
 
+  // Group customer files by customer
+  const customerFilesGrouped = customers.map(customer => {
+    const filesForCustomer = customerFiles.filter(cf => cf.customer_id === customer.id);
+    return {
+      ...customer,
+      files: filesForCustomer
+    };
+  });
+
+  // Group vendor files by vendor
+  const vendorFilesGrouped = vendors.map(vendor => {
+    const filesForVendor = vendorFiles.filter(vf => vf.vendor_name === vendor);
+    return {
+      name: vendor,
+      files: filesForVendor
+    };
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
@@ -203,123 +286,210 @@ const Files = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-4xl font-bold mb-2">File Management</h2>
-            <p className="text-muted-foreground">Current path: {getCurrentPath()}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setFolderDialogOpen(true)}
-              className="bg-accent hover:bg-accent/90"
-            >
-              <FolderPlus className="mr-2 h-4 w-4" />
-              New Folder
-            </Button>
-            <Input
-              type="file"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="file-upload"
-            />
-            <Label
-              htmlFor="file-upload"
-              className="flex items-center gap-2 cursor-pointer bg-accent text-accent-foreground px-4 py-2 rounded-md hover:bg-accent/90"
-            >
-              <Upload className="h-4 w-4" />
-              Upload File
-            </Label>
+            <p className="text-muted-foreground">Organize and manage your files</p>
           </div>
         </div>
 
-        {currentFolder && (
-          <Button
-            variant="outline"
-            onClick={() => setCurrentFolder(null)}
-            className="mb-4"
-          >
-            ← Back to Root
-          </Button>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="all" className="gap-2">
+              <Folder className="h-4 w-4" />
+              All Files
+            </TabsTrigger>
+            <TabsTrigger value="clients" className="gap-2">
+              <Users className="h-4 w-4" />
+              Clients ({customers.length})
+            </TabsTrigger>
+            <TabsTrigger value="vendors" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Vendors ({vendors.length})
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {folders.map((folder) => (
-            <Card
-              key={folder.id}
-              className="cursor-pointer hover:shadow-lg transition-all group"
-            >
-              <CardContent className="p-4">
-                <div
-                  className="flex flex-col items-center text-center"
-                  onClick={() => setCurrentFolder(folder.id)}
-                >
-                  <Folder className="h-16 w-16 text-accent mb-2" />
-                  <p className="font-medium truncate w-full">{folder.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(folder.created_at), "PP")}
-                  </p>
-                </div>
+          {/* All Files Tab */}
+          <TabsContent value="all">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <p className="text-muted-foreground">Current path: {getCurrentPath()}</p>
+              </div>
+              <div className="flex gap-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick("folder", folder.id);
-                  }}
+                  onClick={() => setFolderDialogOpen(true)}
+                  className="bg-accent hover:bg-accent/90"
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <FolderPlus className="mr-2 h-4 w-4" />
+                  New Folder
                 </Button>
-              </CardContent>
-            </Card>
-          ))}
-
-          {files.map((file) => (
-            <Card key={file.id} className="hover:shadow-lg transition-all group">
-              <CardContent className="p-4">
-                <div className="flex flex-col items-center text-center">
-                  <File className="h-16 w-16 text-muted-foreground mb-2" />
-                  <p className="font-medium truncate w-full text-sm">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.file_size / 1024).toFixed(1)} KB
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(file.created_at), "PP")}
-                  </p>
-                </div>
-                <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handlePreviewFile(file.storage_path)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleDownloadFile(file.storage_path, file.name)}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleDeleteClick("file", file.id, file.storage_path)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {folders.length === 0 && files.length === 0 && (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              This folder is empty. Create a folder or upload files to get started.
+                <Input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Label
+                  htmlFor="file-upload"
+                  className="flex items-center gap-2 cursor-pointer bg-accent text-accent-foreground px-4 py-2 rounded-md hover:bg-accent/90"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload File
+                </Label>
+              </div>
             </div>
-          )}
-        </div>
+
+            {currentFolder && (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentFolder(null)}
+                className="mb-4"
+              >
+                ← Back to Root
+              </Button>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {folders.map((folder) => (
+                <Card
+                  key={folder.id}
+                  className="cursor-pointer hover:shadow-lg transition-all group"
+                >
+                  <CardContent className="p-4">
+                    <div
+                      className="flex flex-col items-center text-center"
+                      onClick={() => setCurrentFolder(folder.id)}
+                    >
+                      <Folder className="h-16 w-16 text-accent mb-2" />
+                      <p className="font-medium truncate w-full">{folder.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(folder.created_at), "PP")}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick("folder", folder.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {files.map((file) => (
+                <Card key={file.id} className="hover:shadow-lg transition-all group">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center text-center">
+                      <File className="h-16 w-16 text-muted-foreground mb-2" />
+                      <p className="font-medium truncate w-full text-sm">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.file_size / 1024).toFixed(1)} KB
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(file.created_at), "PP")}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handlePreviewFile(file.storage_path)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDownloadFile(file.storage_path, file.name)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDeleteClick("file", file.id, file.storage_path)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {folders.length === 0 && files.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  This folder is empty. Create a folder or upload files to get started.
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Clients Tab */}
+          <TabsContent value="clients">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {customerFilesGrouped.map((customer) => (
+                <Card
+                  key={customer.id}
+                  className="cursor-pointer hover:shadow-lg transition-all"
+                  onClick={() => window.location.href = `/customers/${customer.id}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <Users className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="font-medium truncate w-full">{customer.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {customer.files.length} file(s)
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {customers.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  No clients yet. Add customers to see their file folders here.
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Vendors Tab */}
+          <TabsContent value="vendors">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {vendorFilesGrouped.map((vendor) => (
+                <Card
+                  key={vendor.name}
+                  className="hover:shadow-lg transition-all"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center mb-2">
+                        <Building2 className="h-8 w-8 text-accent" />
+                      </div>
+                      <p className="font-medium truncate w-full">{vendor.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {vendor.files.length} file(s)
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {vendors.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  No vendors yet. Add expenses with vendors to see their file folders here.
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>

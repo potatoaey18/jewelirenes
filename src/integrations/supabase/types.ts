@@ -769,6 +769,7 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string
+          deleted_at: string | null
           discount: number | null
           id: string
           invoice_image_url: string | null
@@ -781,6 +782,7 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id: string
+          deleted_at?: string | null
           discount?: number | null
           id?: string
           invoice_image_url?: string | null
@@ -793,6 +795,7 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string
+          deleted_at?: string | null
           discount?: number | null
           id?: string
           invoice_image_url?: string | null
@@ -832,6 +835,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vendor_files: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_id: string
+          id: string
+          vendor_name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_id: string
+          id?: string
+          vendor_name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_id?: string
+          id?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_files_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
