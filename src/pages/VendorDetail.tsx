@@ -12,10 +12,12 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrencyForPDF } from "@/lib/pdfUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const VendorDetail = () => {
   const { vendorName } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [bankChecks, setBankChecks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,7 +226,7 @@ const VendorDetail = () => {
           </div>
         )}
 
-        {/* Expenses Table */}
+        {/* Expenses Section */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Expense Transactions</CardTitle>
@@ -232,6 +234,33 @@ const VendorDetail = () => {
           <CardContent>
             {expenses.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">No expenses found</p>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {expenses.map((expense) => (
+                  <Card key={expense.id} className="overflow-hidden border-border/50">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(expense.expense_date), "PP")}
+                          </p>
+                          <Badge variant="outline" className="mt-1">{expense.category}</Badge>
+                        </div>
+                        <p className="text-lg font-bold text-accent">
+                          ₱{Number(expense.amount).toLocaleString()}
+                        </p>
+                      </div>
+                      {expense.description && (
+                        <p className="text-sm text-muted-foreground">{expense.description}</p>
+                      )}
+                      <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t border-border/50">
+                        <span>{expense.payment_method || "N/A"}</span>
+                        {expense.notes && <span className="truncate max-w-[150px]">{expense.notes}</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -273,51 +302,89 @@ const VendorDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Bank Checks Table */}
+        {/* Bank Checks Section */}
         {bankChecks.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Bank Checks</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date Received</TableHead>
-                      <TableHead>Bank</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Check #</TableHead>
-                      <TableHead>Check Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bankChecks.map((check) => (
-                      <TableRow key={check.id}>
-                        <TableCell className="whitespace-nowrap">
-                          {format(new Date(check.date_received), "PP")}
-                        </TableCell>
-                        <TableCell>{check.bank}</TableCell>
-                        <TableCell>{check.branch}</TableCell>
-                        <TableCell>{check.check_number}</TableCell>
-                        <TableCell>
-                          {format(new Date(check.check_date), "PP")}
-                        </TableCell>
-                        <TableCell>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {bankChecks.map((check) => (
+                    <Card key={check.id} className="overflow-hidden border-border/50">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold">{check.bank}</p>
+                            <p className="text-xs text-muted-foreground">{check.branch}</p>
+                          </div>
                           <Badge variant={check.status === "Encashed" ? "default" : "secondary"}>
                             {check.status}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ₱{Number(check.amount).toLocaleString()}
-                        </TableCell>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Check #</p>
+                            <p className="font-medium">{check.check_number}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Check Date</p>
+                            <p className="font-medium">{format(new Date(check.check_date), "PP")}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                          <span className="text-xs text-muted-foreground">
+                            Received: {format(new Date(check.date_received), "PP")}
+                          </span>
+                          <span className="text-lg font-bold text-accent">
+                            ₱{Number(check.amount).toLocaleString()}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date Received</TableHead>
+                        <TableHead>Bank</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Check #</TableHead>
+                        <TableHead>Check Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {bankChecks.map((check) => (
+                        <TableRow key={check.id}>
+                          <TableCell className="whitespace-nowrap">
+                            {format(new Date(check.date_received), "PP")}
+                          </TableCell>
+                          <TableCell>{check.bank}</TableCell>
+                          <TableCell>{check.branch}</TableCell>
+                          <TableCell>{check.check_number}</TableCell>
+                          <TableCell>
+                            {format(new Date(check.check_date), "PP")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={check.status === "Encashed" ? "default" : "secondary"}>
+                              {check.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            ₱{Number(check.amount).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

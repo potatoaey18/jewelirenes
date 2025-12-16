@@ -79,21 +79,21 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4 sm:p-6">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="space-y-1 text-center px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex justify-center mb-4">
-            <Crown className="h-12 w-12 text-accent" />
+            <Crown className="h-14 w-14 sm:h-12 sm:w-12 text-accent" />
           </div>
-          <CardTitle className="text-2xl font-bold">Jewelirene's</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl font-bold">Jewelirene's</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             {isLogin ? "Sign in to your account" : "Create a new account"}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAuth} className="space-y-4">
+        <CardContent className="px-6 sm:px-8 pb-6 sm:pb-8">
+          <form onSubmit={handleAuth} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm sm:text-base font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -101,10 +101,11 @@ const Auth = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-12 sm:h-11 text-base"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm sm:text-base font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -113,18 +114,19 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                className="h-12 sm:h-11 text-base"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-12 sm:h-11 text-base font-medium" disabled={loading}>
               {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
             </Button>
           </form>
           
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-6 text-center">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline"
+              className="text-sm sm:text-base text-primary hover:underline py-2 px-4"
             >
               {isLogin
                 ? "Don't have an account? Sign up"

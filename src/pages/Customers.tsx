@@ -26,9 +26,11 @@ import Navigation from "@/components/Navigation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrencyForPDF } from "@/lib/pdfUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Customers = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const exportRef = useRef<HTMLDivElement>(null);
   const masterHistoryRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
@@ -463,56 +465,40 @@ const Customers = () => {
               </Button>
             </div>
 
-            <Card className="overflow-hidden">
-              <div ref={masterHistoryRef} className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date Sold</TableHead>
-                      <TableHead>Customer Name</TableHead>
-                      <TableHead>Product Names</TableHead>
-                      <TableHead>Retail Price</TableHead>
-                      <TableHead>Discount</TableHead>
-                      <TableHead>Discounted Price</TableHead>
-                      <TableHead>Payments</TableHead>
-                      <TableHead>Balance</TableHead>
-                      <TableHead>Invoice</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {masterHistory.map((transaction) => {
-                      const customerName = transaction.customers?.name || "Unknown";
-                      const customerId = transaction.customer_id;
-                      const productNames = transaction.transaction_items?.map((item: any) => item.product_name).join(", ") || "-";
-                      const retailPrice = parseFloat(transaction.total_amount || 0);
-                      const discount = parseFloat(transaction.discount || 0);
-                      const discountedPrice = discount > 0 ? retailPrice - discount : null;
-                      const paymentPlan = transaction.payment_plans?.[0];
-                      const payments = paymentPlan?.collections?.reduce(
-                        (sum: number, c: any) => sum + parseFloat(c.amount_paid || 0),
-                        0
-                      ) || 0;
-                      const balance = paymentPlan?.balance || 0;
-                      const dateSold = new Date(transaction.created_at).toLocaleDateString();
+            {/* Mobile Card View */}
+            {isMobile ? (
+              <div ref={masterHistoryRef} className="space-y-3">
+                {masterHistory.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No transaction history yet</div>
+                ) : (
+                  masterHistory.map((transaction) => {
+                    const customerName = transaction.customers?.name || "Unknown";
+                    const customerId = transaction.customer_id;
+                    const productNames = transaction.transaction_items?.map((item: any) => item.product_name).join(", ") || "-";
+                    const retailPrice = parseFloat(transaction.total_amount || 0);
+                    const discount = parseFloat(transaction.discount || 0);
+                    const discountedPrice = discount > 0 ? retailPrice - discount : null;
+                    const paymentPlan = transaction.payment_plans?.[0];
+                    const payments = paymentPlan?.collections?.reduce(
+                      (sum: number, c: any) => sum + parseFloat(c.amount_paid || 0),
+                      0
+                    ) || 0;
+                    const balance = paymentPlan?.balance || 0;
+                    const dateSold = new Date(transaction.created_at).toLocaleDateString();
 
-                      return (
-                        <TableRow key={transaction.id}>
-                          <TableCell>{dateSold}</TableCell>
-                          <TableCell>
-                            <button
-                              onClick={() => navigate(`/customers/${customerId}`)}
-                              className="text-accent hover:underline font-medium"
-                            >
-                              {customerName}
-                            </button>
-                          </TableCell>
-                          <TableCell>{productNames}</TableCell>
-                          <TableCell>₱{retailPrice.toLocaleString()}</TableCell>
-                          <TableCell>{discount > 0 ? `₱${discount.toLocaleString()}` : "-"}</TableCell>
-                          <TableCell>{discountedPrice ? `₱${discountedPrice.toLocaleString()}` : "-"}</TableCell>
-                          <TableCell>₱{payments.toLocaleString()}</TableCell>
-                          <TableCell>₱{balance.toLocaleString()}</TableCell>
-                          <TableCell>
+                    return (
+                      <Card key={transaction.id} className="overflow-hidden">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <button
+                                onClick={() => navigate(`/customers/${customerId}`)}
+                                className="text-accent hover:underline font-semibold text-base"
+                              >
+                                {customerName}
+                              </button>
+                              <p className="text-xs text-muted-foreground mt-1">{dateSold}</p>
+                            </div>
                             {transaction.invoice_image_url && (
                               <Button
                                 variant="outline"
@@ -522,14 +508,108 @@ const Customers = () => {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                          </div>
+                          
+                          <p className="text-sm text-muted-foreground line-clamp-2">{productNames}</p>
+                          
+                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Retail Price</p>
+                              <p className="font-semibold">₱{retailPrice.toLocaleString()}</p>
+                            </div>
+                            {discount > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground">Discount</p>
+                                <p className="font-semibold text-destructive">-₱{discount.toLocaleString()}</p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs text-muted-foreground">Payments</p>
+                              <p className="font-semibold text-green-600">₱{payments.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Balance</p>
+                              <p className={`font-semibold ${balance > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                                ₱{balance.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
               </div>
-            </Card>
+            ) : (
+              /* Desktop Table View */
+              <Card className="overflow-hidden">
+                <div ref={masterHistoryRef} className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date Sold</TableHead>
+                        <TableHead>Customer Name</TableHead>
+                        <TableHead>Product Names</TableHead>
+                        <TableHead>Retail Price</TableHead>
+                        <TableHead>Discount</TableHead>
+                        <TableHead>Discounted Price</TableHead>
+                        <TableHead>Payments</TableHead>
+                        <TableHead>Balance</TableHead>
+                        <TableHead>Invoice</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {masterHistory.map((transaction) => {
+                        const customerName = transaction.customers?.name || "Unknown";
+                        const customerId = transaction.customer_id;
+                        const productNames = transaction.transaction_items?.map((item: any) => item.product_name).join(", ") || "-";
+                        const retailPrice = parseFloat(transaction.total_amount || 0);
+                        const discount = parseFloat(transaction.discount || 0);
+                        const discountedPrice = discount > 0 ? retailPrice - discount : null;
+                        const paymentPlan = transaction.payment_plans?.[0];
+                        const payments = paymentPlan?.collections?.reduce(
+                          (sum: number, c: any) => sum + parseFloat(c.amount_paid || 0),
+                          0
+                        ) || 0;
+                        const balance = paymentPlan?.balance || 0;
+                        const dateSold = new Date(transaction.created_at).toLocaleDateString();
+
+                        return (
+                          <TableRow key={transaction.id}>
+                            <TableCell>{dateSold}</TableCell>
+                            <TableCell>
+                              <button
+                                onClick={() => navigate(`/customers/${customerId}`)}
+                                className="text-accent hover:underline font-medium"
+                              >
+                                {customerName}
+                              </button>
+                            </TableCell>
+                            <TableCell>{productNames}</TableCell>
+                            <TableCell>₱{retailPrice.toLocaleString()}</TableCell>
+                            <TableCell>{discount > 0 ? `₱${discount.toLocaleString()}` : "-"}</TableCell>
+                            <TableCell>{discountedPrice ? `₱${discountedPrice.toLocaleString()}` : "-"}</TableCell>
+                            <TableCell>₱{payments.toLocaleString()}</TableCell>
+                            <TableCell>₱{balance.toLocaleString()}</TableCell>
+                            <TableCell>
+                              {transaction.invoice_image_url && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(transaction.invoice_image_url, "_blank")}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </main>
