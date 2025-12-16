@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createAuditLog } from "@/lib/auditLog";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
+import { CsvImport } from "@/components/CsvImport";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -276,13 +277,46 @@ const Customers = () => {
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Customers</h2>
             <p className="text-sm sm:text-base text-muted-foreground">Manage your client relationships</p>
           </div>
-          <Button
-            onClick={handleAdd}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Customer
-          </Button>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <CsvImport
+              title="Import Customers"
+              columns={[
+                { key: "name", label: "Customer Name", required: true },
+                { key: "email", label: "Email Address" },
+                { key: "phone", label: "Phone Number" },
+                { key: "address", label: "Full Address" },
+                { key: "location", label: "Location/City" },
+                { key: "tier", label: "Tier (VIP/Gold/Silver)" },
+                { key: "notes", label: "Notes" },
+              ]}
+              sampleData={[
+                { name: "Maria Santos", email: "maria@email.com", phone: "09171234567", address: "123 Main St, Manila", location: "Manila", tier: "Gold", notes: "Regular customer" },
+                { name: "Jose Reyes", email: "jose@email.com", phone: "09181234567", address: "456 Oak Ave, Cebu", location: "Cebu", tier: "Silver", notes: "" },
+              ]}
+              onImport={async (data) => {
+                const { error } = await supabase.from("customers").insert(
+                  data.map(row => ({
+                    name: row.name,
+                    email: row.email || null,
+                    phone: row.phone || null,
+                    address: row.address || null,
+                    location: row.location || null,
+                    tier: row.tier || "Silver",
+                    notes: row.notes || null,
+                  }))
+                );
+                if (error) throw error;
+                fetchCustomers();
+              }}
+            />
+            <Button
+              onClick={handleAdd}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Customer
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="directory" className="w-full">

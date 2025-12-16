@@ -7,6 +7,7 @@ import { FinishedItemsTab } from "@/components/inventory/FinishedItemsTab";
 import { RawMaterialsTab } from "@/components/inventory/RawMaterialsTab";
 import { FinishedItemDialog } from "@/components/inventory/FinishedItemDialog";
 import { RawMaterialDialog } from "@/components/inventory/RawMaterialDialog";
+import { CsvImport } from "@/components/CsvImport";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -147,6 +148,43 @@ export default function Inventory() {
             )}
             {activeTab === "materials" && (
               <>
+                <CsvImport
+                  title="Import Raw Materials"
+                  columns={[
+                    { key: "name", label: "Material Name", required: true },
+                    { key: "type", label: "Type (gold/silver/diamond/gem/south_sea_pearl/other)", required: true },
+                    { key: "quantity_on_hand", label: "Quantity", required: true },
+                    { key: "unit", label: "Unit (grams/pcs)", required: true },
+                    { key: "cost_per_unit", label: "Cost per Unit", required: true },
+                    { key: "other_description", label: "Other Description (if type is other)" },
+                  ]}
+                  sampleData={[
+                    { name: "18K Yellow Gold", type: "gold", quantity_on_hand: "100", unit: "grams", cost_per_unit: "3500", other_description: "" },
+                    { name: "Round Diamond 0.5ct", type: "diamond", quantity_on_hand: "50", unit: "pcs", cost_per_unit: "15000", other_description: "" },
+                    { name: "Ruby Oval", type: "gem", quantity_on_hand: "20", unit: "pcs", cost_per_unit: "8000", other_description: "" },
+                    { name: "925 Sterling Silver", type: "silver", quantity_on_hand: "500", unit: "grams", cost_per_unit: "80", other_description: "" },
+                  ]}
+                  onImport={async (data) => {
+                    const validTypes = ["gold", "silver", "diamond", "gem", "south_sea_pearl", "other"];
+                    const materials = data.map(row => {
+                      const type = row.type?.toLowerCase();
+                      if (!validTypes.includes(type)) {
+                        throw new Error(`Invalid type "${row.type}" for material "${row.name}". Valid types: ${validTypes.join(", ")}`);
+                      }
+                      return {
+                        name: row.name,
+                        type: type as any,
+                        quantity_on_hand: parseFloat(row.quantity_on_hand) || 0,
+                        unit: row.unit,
+                        cost_per_unit: parseFloat(row.cost_per_unit) || 0,
+                        other_description: row.other_description || null,
+                      };
+                    });
+                    const { error } = await supabase.from("raw_materials").insert(materials);
+                    if (error) throw error;
+                    handleSuccess();
+                  }}
+                />
                 <Button onClick={exportMaterialsPDF} variant="outline" className="w-full sm:w-auto">
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
