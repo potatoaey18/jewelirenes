@@ -30,9 +30,11 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({ vendor: '' });
+  const [newVendorName, setNewVendorName] = useState('');
 
   const vendors = useMemo(() => {
     const vendorMap = new Map<string, VendorSummary>();
@@ -69,6 +71,40 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
   );
 
   const totalVendorSpend = vendors.reduce((sum, v) => sum + v.totalAmount, 0);
+
+  // Add new vendor (creates a placeholder expense with $0)
+  const addVendor = useMutation({
+    mutationFn: async (vendorName: string) => {
+      // Check if vendor already exists
+      const existingVendor = vendors.find(v => v.name.toLowerCase() === vendorName.toLowerCase());
+      if (existingVendor) {
+        throw new Error('Vendor already exists');
+      }
+
+      const { error } = await supabase
+        .from('expenses')
+        .insert([{
+          vendor: vendorName,
+          amount: 0,
+          category: 'Other',
+          description: 'Vendor registration',
+          expense_date: new Date().toISOString(),
+          created_by: user?.id
+        }]);
+      
+      if (error) throw error;
+      await createAuditLog('CREATE', 'expenses', undefined, undefined, { vendor: vendorName, type: 'vendor_registration' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Vendor added successfully');
+      setAddVendorDialogOpen(false);
+      setNewVendorName('');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to add vendor');
+    }
+  });
 
   // Update all expenses with old vendor name to new vendor name
   const updateVendor = useMutation({
@@ -123,6 +159,13 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
     e.preventDefault();
     if (editingVendor && formData.vendor) {
       updateVendor.mutate({ oldName: editingVendor, newName: formData.vendor });
+    }
+  };
+
+  const handleAddVendorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newVendorName.trim()) {
+      addVendor.mutate(newVendorName.trim());
     }
   };
 
@@ -189,6 +232,33 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
               className="pl-10"
             />
           </div>
+          <Dialog open={addVendorDialogOpen} onOpenChange={setAddVendorDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Vendor
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Vendor</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddVendorSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="newVendor">Vendor Name</Label>
+                  <Input
+                    id="newVendor"
+                    value={newVendorName}
+                    onChange={(e) => setNewVendorName(e.target.value)}
+                    required
+                    placeholder="Enter vendor name"
+                    className="mt-2"
+                  />
+                </div>
+                <Button type="submit" className="w-full">Add Vendor</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="overflow-x-auto">

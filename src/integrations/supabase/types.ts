@@ -290,8 +290,13 @@ export type Database = {
       }
       expenses: {
         Row: {
+          account_name: string | null
           amount: number
+          bank: string | null
+          branch: string | null
           category: string
+          check_date: string | null
+          check_number: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -300,12 +305,18 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           receipt_url: string | null
+          reference_number: string | null
           updated_at: string
           vendor: string | null
         }
         Insert: {
+          account_name?: string | null
           amount: number
+          bank?: string | null
+          branch?: string | null
           category: string
+          check_date?: string | null
+          check_number?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -314,12 +325,18 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           receipt_url?: string | null
+          reference_number?: string | null
           updated_at?: string
           vendor?: string | null
         }
         Update: {
+          account_name?: string | null
           amount?: number
+          bank?: string | null
+          branch?: string | null
           category?: string
+          check_date?: string | null
+          check_number?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -328,6 +345,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           receipt_url?: string | null
+          reference_number?: string | null
           updated_at?: string
           vendor?: string | null
         }

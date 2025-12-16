@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Navigation from '@/components/Navigation';
@@ -17,9 +17,13 @@ import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
 import { VendorDirectory } from '@/components/expenses/VendorDirectory';
 import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
+import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
+
+const ONLINE_PAYMENT_METHODS = ['GCash', 'BDO', 'BPI', 'Bank Transfer', 'Credit Card', 'Debit Card'];
+const CHECK_PAYMENT_METHOD = 'Check';
 
 export default function Expenses() {
   const { user } = useAuth();
@@ -33,7 +37,13 @@ export default function Expenses() {
     description: '',
     vendor: '',
     payment_method: '',
-    notes: ''
+    notes: '',
+    reference_number: '',
+    account_name: '',
+    check_number: '',
+    check_date: '',
+    bank: '',
+    branch: ''
   });
 
   const { data: expenses = [] } = useQuery({
@@ -49,30 +59,94 @@ export default function Expenses() {
     }
   });
 
+  // Get unique vendors for suggestions
+  const uniqueVendors = useMemo(() => {
+    const vendors = new Set<string>();
+    expenses.forEach(exp => {
+      if (exp.vendor) vendors.add(exp.vendor);
+    });
+    return Array.from(vendors).sort();
+  }, [expenses]);
+
   const createExpense = useMutation({
     mutationFn: async (data: any) => {
+      const expenseData = {
+        amount: data.amount,
+        expense_date: data.expense_date,
+        category: data.category,
+        description: data.description,
+        vendor: data.vendor,
+        payment_method: data.payment_method,
+        notes: data.notes,
+        reference_number: data.reference_number || null,
+        account_name: data.account_name || null,
+        check_number: data.check_number || null,
+        check_date: data.check_date || null,
+        bank: data.bank || null,
+        branch: data.branch || null,
+        created_by: user?.id
+      };
+
       const { error } = await supabase
         .from('expenses')
-        .insert([{ ...data, created_by: user?.id }]);
+        .insert([expenseData]);
       
       if (error) throw error;
-      await createAuditLog('CREATE', 'expenses', undefined, undefined, data);
+
+      // If payment method is Check, also create an expense_bank_check entry
+      if (data.payment_method === CHECK_PAYMENT_METHOD && data.check_number) {
+        const bankCheckData = {
+          vendor: data.vendor,
+          bank: data.bank,
+          branch: data.branch,
+          check_number: data.check_number,
+          check_date: data.check_date,
+          amount: data.amount,
+          invoice_number: null,
+          date_received: data.expense_date,
+          expiry_date: null,
+          status: 'Not Yet',
+          notes: data.notes,
+          created_by: user?.id
+        };
+
+        const { error: checkError } = await supabase
+          .from('expense_bank_checks')
+          .insert([bankCheckData]);
+        
+        if (checkError) {
+          console.error('Failed to create bank check entry:', checkError);
+        }
+      }
+
+      await createAuditLog('CREATE', 'expenses', undefined, undefined, expenseData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['expense_bank_checks'] });
       toast.success('Expense added successfully');
       setDialogOpen(false);
-      setFormData({
-        amount: '',
-        expense_date: new Date().toISOString().split('T')[0],
-        category: '',
-        description: '',
-        vendor: '',
-        payment_method: '',
-        notes: ''
-      });
+      resetForm();
     }
   });
+
+  const resetForm = () => {
+    setFormData({
+      amount: '',
+      expense_date: new Date().toISOString().split('T')[0],
+      category: '',
+      description: '',
+      vendor: '',
+      payment_method: '',
+      notes: '',
+      reference_number: '',
+      account_name: '',
+      check_number: '',
+      check_date: '',
+      bank: '',
+      branch: ''
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +160,9 @@ export default function Expenses() {
   );
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+
+  const showReferenceFields = ONLINE_PAYMENT_METHODS.includes(formData.payment_method) || formData.payment_method === CHECK_PAYMENT_METHOD;
+  const showCheckFields = formData.payment_method === CHECK_PAYMENT_METHOD;
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -191,11 +268,12 @@ export default function Expenses() {
                     </div>
                     <div>
                       <Label htmlFor="vendor" className="text-base font-semibold mb-2 block">Vendor</Label>
-                      <Input
+                      <VendorSearchInput
                         id="vendor"
                         value={formData.vendor}
-                        onChange={(e) => setFormData({...formData, vendor: e.target.value})}
-                        className="h-12 text-base"
+                        onChange={(value) => setFormData({...formData, vendor: value})}
+                        vendors={uniqueVendors}
+                        placeholder="Search or enter vendor..."
                       />
                     </div>
                     <div>
@@ -216,6 +294,83 @@ export default function Expenses() {
                         </SelectContent>
                       </Select>
                     </div>
+                    
+                    {/* Reference fields for Check and Online payments */}
+                    {showReferenceFields && (
+                      <>
+                        <div>
+                          <Label htmlFor="reference_number" className="text-base font-semibold mb-2 block">Reference Number</Label>
+                          <Input
+                            id="reference_number"
+                            value={formData.reference_number}
+                            onChange={(e) => setFormData({...formData, reference_number: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter reference number"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="account_name" className="text-base font-semibold mb-2 block">Account Name</Label>
+                          <Input
+                            id="account_name"
+                            value={formData.account_name}
+                            onChange={(e) => setFormData({...formData, account_name: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter account name"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Additional Check-specific fields */}
+                    {showCheckFields && (
+                      <>
+                        <div>
+                          <Label htmlFor="check_number" className="text-base font-semibold mb-2 block">Check Number *</Label>
+                          <Input
+                            id="check_number"
+                            required
+                            value={formData.check_number}
+                            onChange={(e) => setFormData({...formData, check_number: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter check number"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="check_date" className="text-base font-semibold mb-2 block">Check Date *</Label>
+                          <Input
+                            id="check_date"
+                            type="date"
+                            required
+                            value={formData.check_date}
+                            onChange={(e) => setFormData({...formData, check_date: e.target.value})}
+                            className="h-12 text-base"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="bank" className="text-base font-semibold mb-2 block">Bank *</Label>
+                          <Input
+                            id="bank"
+                            required
+                            value={formData.bank}
+                            onChange={(e) => setFormData({...formData, bank: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter bank name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="branch" className="text-base font-semibold mb-2 block">Branch *</Label>
+                          <Input
+                            id="branch"
+                            required
+                            value={formData.branch}
+                            onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter branch"
+                          />
+                        </div>
+                      </>
+                    )}
+
                     <div className="md:col-span-2">
                       <Label htmlFor="description" className="text-base font-semibold mb-2 block">Description</Label>
                       <Input
