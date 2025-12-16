@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { BankCheckDialog } from '@/components/collections/BankCheckDialog';
 import { BankCheckBookView } from '@/components/collections/BankCheckBookView';
 import { BankCheckDetailDialog } from '@/components/customers/BankCheckDetailDialog';
+import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -34,6 +35,12 @@ export default function Collections() {
   const [selectedBankCheck, setSelectedBankCheck] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [plansViewMode, setPlansViewMode] = useState<ViewMode>(() => 
+    (localStorage.getItem("collections-plans-view") as ViewMode) || "table"
+  );
+  const [historyViewMode, setHistoryViewMode] = useState<ViewMode>(() => 
+    (localStorage.getItem("collections-history-view") as ViewMode) || "table"
+  );
   
   const [planFormData, setPlanFormData] = useState({
     customer_id: '',
@@ -457,43 +464,46 @@ export default function Collections() {
                     className="pl-10"
                   />
                 </div>
-                <Button variant="outline" onClick={handleExportPaymentPlansPDF} className="w-full sm:w-auto">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export PDF
-                </Button>
+                <div className="flex gap-2">
+                  <ViewToggle 
+                    viewMode={plansViewMode} 
+                    onViewModeChange={(mode) => {
+                      setPlansViewMode(mode);
+                      localStorage.setItem("collections-plans-view", mode);
+                    }} 
+                  />
+                  <Button variant="outline" onClick={handleExportPaymentPlansPDF} className="flex-1 sm:flex-none">
+                    <Download className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Export PDF</span>
+                  </Button>
+                </div>
               </div>
-              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Product Names</TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>Amount Paid</TableHead>
-                      <TableHead>Balance</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPlans.map((plan) => {
+              
+              {plansViewMode === "cards" ? (
+                <div className="space-y-2">
+                  {filteredPlans.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground text-sm">No payment plans found</p>
+                  ) : (
+                    filteredPlans.map((plan) => {
                       const productNames = plan.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
                       return (
-                        <TableRow key={plan.id}>
-                          <TableCell className="font-medium">{plan.customers?.name}</TableCell>
-                          <TableCell>{productNames}</TableCell>
-                          <TableCell>₱{Number(plan.total_amount).toFixed(2)}</TableCell>
-                          <TableCell>₱{Number(plan.amount_paid).toFixed(2)}</TableCell>
-                          <TableCell>₱{Number(plan.balance).toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'}>
-                              {plan.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
+                        <Card key={plan.id} className="hover:bg-muted/50 transition-colors">
+                          <CardContent className="p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm">{plan.customers?.name}</span>
+                              <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'} className="text-[10px]">
+                                {plan.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">{productNames}</p>
+                            <div className="flex justify-between text-xs">
+                              <span>Paid: ₱{Number(plan.amount_paid).toLocaleString()}</span>
+                              <span className="font-bold">Bal: ₱{Number(plan.balance).toLocaleString()}</span>
+                            </div>
                             {plan.status === 'active' && (
                               <Button
                                 size="sm"
+                                className="w-full h-7 text-xs"
                                 onClick={() => {
                                   setSelectedPlan(plan);
                                   setPaymentDialogOpen(true);
@@ -502,32 +512,111 @@ export default function Collections() {
                                 Add Payment
                               </Button>
                             )}
-                          </TableCell>
-                        </TableRow>
+                          </CardContent>
+                        </Card>
                       );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                    })
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Product Names</TableHead>
+                        <TableHead>Total Amount</TableHead>
+                        <TableHead>Amount Paid</TableHead>
+                        <TableHead>Balance</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPlans.map((plan) => {
+                        const productNames = plan.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
+                        return (
+                          <TableRow key={plan.id}>
+                            <TableCell className="font-medium">{plan.customers?.name}</TableCell>
+                            <TableCell>{productNames}</TableCell>
+                            <TableCell>₱{Number(plan.total_amount).toFixed(2)}</TableCell>
+                            <TableCell>₱{Number(plan.amount_paid).toFixed(2)}</TableCell>
+                            <TableCell>₱{Number(plan.balance).toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'}>
+                                {plan.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {plan.status === 'active' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedPlan(plan);
+                                    setPaymentDialogOpen(true);
+                                  }}
+                                >
+                                  Add Payment
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </Card>
           </TabsContent>
 
           <TabsContent value="payments">
-            <Card className="p-6">
-              <div className="flex justify-end mb-4">
+            <Card className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4">
+                <ViewToggle 
+                  viewMode={historyViewMode} 
+                  onViewModeChange={(mode) => {
+                    setHistoryViewMode(mode);
+                    localStorage.setItem("collections-history-view", mode);
+                  }} 
+                />
                 <Button variant="outline" onClick={handleExportPaymentHistoryPDF}>
                   <Download className="mr-2 h-4 w-4" />
                   Export PDF
                 </Button>
               </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Product Names</TableHead>
-                      <TableHead>Amount Paid</TableHead>
+              
+              {historyViewMode === "cards" ? (
+                <div className="space-y-2">
+                  {collections.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground text-sm">No payments found</p>
+                  ) : (
+                    collections.map((collection) => {
+                      const productNames = collection.payment_plans?.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
+                      return (
+                        <Card key={collection.id}>
+                          <CardContent className="p-3 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">{new Date(collection.payment_date).toLocaleDateString()}</span>
+                              <span className="font-bold text-sm text-accent">₱{Number(collection.amount_paid).toLocaleString()}</span>
+                            </div>
+                            <p className="font-medium text-sm">{collection.payment_plans?.customers?.name || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{productNames}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Product Names</TableHead>
+                        <TableHead>Amount Paid</TableHead>
                       <TableHead>Payment Method</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
@@ -549,6 +638,7 @@ export default function Collections() {
                   </TableBody>
                 </Table>
               </div>
+              )}
             </Card>
           </TabsContent>
 

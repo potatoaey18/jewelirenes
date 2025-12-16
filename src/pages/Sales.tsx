@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckoutDialog } from "@/components/pos/CheckoutDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ViewToggle, ViewMode } from "@/components/ui/view-toggle";
 
 interface CartItem {
   id: string;
@@ -67,6 +68,12 @@ const Sales = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [soldViewMode, setSoldViewMode] = useState<ViewMode>(() => 
+    (localStorage.getItem("sales-sold-view") as ViewMode) || "cards"
+  );
+  const [binViewMode, setBinViewMode] = useState<ViewMode>(() => 
+    (localStorage.getItem("sales-bin-view") as ViewMode) || "cards"
+  );
 
   useEffect(() => {
     fetchItems();
@@ -404,10 +411,19 @@ const Sales = () => {
           {/* Sold Items Tab */}
           <TabsContent value="sold">
             <Card className="p-3 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Sold Items</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-2xl font-bold">Sold Items</h2>
+                <ViewToggle 
+                  viewMode={soldViewMode} 
+                  onViewModeChange={(mode) => {
+                    setSoldViewMode(mode);
+                    localStorage.setItem("sales-sold-view", mode);
+                  }} 
+                />
+              </div>
               
               {/* Mobile Card View */}
-              {isMobile ? (
+              {soldViewMode === "cards" ? (
                 <div className="space-y-3">
                   {soldTransactions.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">No sold items yet</div>
@@ -510,16 +526,24 @@ const Sales = () => {
           {/* Bin Tab */}
           <TabsContent value="bin">
             <Card className="p-3 sm:p-6">
-              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
-                <h2 className="text-xl sm:text-2xl font-bold">Bin</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                  <h2 className="text-lg sm:text-2xl font-bold">Bin</h2>
+                </div>
+                <ViewToggle 
+                  viewMode={binViewMode} 
+                  onViewModeChange={(mode) => {
+                    setBinViewMode(mode);
+                    localStorage.setItem("sales-bin-view", mode);
+                  }} 
+                />
               </div>
-              <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                 Deleted transactions can be restored or permanently deleted.
               </p>
               
-              {/* Mobile Card View */}
-              {isMobile ? (
+              {binViewMode === "cards" ? (
                 <div className="space-y-3">
                   {deletedTransactions.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">Bin is empty</div>

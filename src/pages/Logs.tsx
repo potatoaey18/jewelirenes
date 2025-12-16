@@ -3,18 +3,22 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Navigation from '@/components/Navigation';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
+import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
 
 export default function Logs() {
   const { user, isAdmin } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => 
+    (localStorage.getItem("logs-view") as ViewMode) || "table"
+  );
 
   const { data: logs = [] } = useQuery({
     queryKey: ['audit_logs', isAdmin],
@@ -98,11 +102,20 @@ export default function Logs() {
     <div className="min-h-screen bg-background">
       <Navigation />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">Activity Logs</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {isAdmin ? 'View all user activity' : 'View your activity history'}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <div>
+            <h1 className="text-xl sm:text-3xl font-bold">Activity Logs</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {isAdmin ? 'View all user activity' : 'View your activity history'}
+            </p>
+          </div>
+          <ViewToggle 
+            viewMode={viewMode} 
+            onViewModeChange={(mode) => {
+              setViewMode(mode);
+              localStorage.setItem("logs-view", mode);
+            }} 
+          />
         </div>
 
         <Card className="p-3 sm:p-6">
@@ -118,15 +131,49 @@ export default function Logs() {
             </div>
           </div>
 
-          <ResponsiveTable
-            columns={columns}
-            data={filteredLogs}
-            onRowClick={(log) => {
-              setSelectedLog(log);
-              setDetailsOpen(true);
-            }}
-            emptyMessage="No logs found"
-          />
+          {viewMode === "cards" ? (
+            <div className="space-y-2">
+              {filteredLogs.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No logs found</p>
+              ) : (
+                filteredLogs.map((log) => (
+                  <Card 
+                    key={log.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setSelectedLog(log);
+                      setDetailsOpen(true);
+                    }}
+                  >
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant={
+                          log.action === 'CREATE' ? 'default' :
+                          log.action === 'UPDATE' ? 'secondary' :
+                          log.action === 'DELETE' ? 'destructive' : 'outline'
+                        } className="text-[10px]">
+                          {log.action}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px]">{getModuleName(log.table_name)}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{log.user_email}</p>
+                      <p className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleString()}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          ) : (
+            <ResponsiveTable
+              columns={columns}
+              data={filteredLogs}
+              onRowClick={(log) => {
+                setSelectedLog(log);
+                setDetailsOpen(true);
+              }}
+              emptyMessage="No logs found"
+            />
+          )}
         </Card>
 
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>

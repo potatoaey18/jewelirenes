@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { CsvImport, CsvSampleDownload } from '@/components/CsvImport';
+import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
@@ -34,6 +35,9 @@ export default function Expenses() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => 
+    (localStorage.getItem("expenses-view") as ViewMode) || "table"
+  );
   const [formData, setFormData] = useState({
     amount: '',
     expense_date: new Date().toISOString().split('T')[0],
@@ -505,38 +509,73 @@ export default function Expenses() {
 
           <TabsContent value="expenses">
             <Card className="p-3 sm:p-6 lg:p-8">
-              <div className="flex justify-end mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4 sm:mb-6">
+                <ViewToggle 
+                  viewMode={viewMode} 
+                  onViewModeChange={(mode) => {
+                    setViewMode(mode);
+                    localStorage.setItem("expenses-view", mode);
+                  }} 
+                />
                 <Button variant="outline" onClick={handleExportPDF} className="w-full sm:w-auto">
                   <Download className="mr-2 h-4 w-4" />
                   Export PDF
                 </Button>
               </div>
 
-              <ResponsiveTable
-                columns={[
-                  {
-                    key: 'expense_date',
-                    label: 'Date',
-                    render: (value: string) => new Date(value).toLocaleDateString()
-                  },
-                  { key: 'description', label: 'Description' },
-                  { key: 'category', label: 'Category' },
-                  { key: 'vendor', label: 'Vendor' },
-                  { key: 'payment_method', label: 'Payment' },
-                  {
-                    key: 'amount',
-                    label: 'Amount',
-                    className: 'text-right font-semibold',
-                    render: (value: number) => `₱${Number(value).toLocaleString()}`
-                  }
-                ]}
-                data={filteredExpenses}
-                onRowClick={(expense) => {
-                  setSelectedExpense(expense);
-                  setDetailDialogOpen(true);
-                }}
-                emptyMessage="No expenses found"
-              />
+              {viewMode === "cards" ? (
+                <div className="space-y-2">
+                  {filteredExpenses.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground text-sm">No expenses found</p>
+                  ) : (
+                    filteredExpenses.map((expense) => (
+                      <Card 
+                        key={expense.id} 
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => {
+                          setSelectedExpense(expense);
+                          setDetailDialogOpen(true);
+                        }}
+                      >
+                        <CardContent className="p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">{new Date(expense.expense_date).toLocaleDateString()}</span>
+                            <span className="font-bold text-sm text-accent">₱{Number(expense.amount).toLocaleString()}</span>
+                          </div>
+                          <p className="font-medium text-sm truncate">{expense.description || expense.category}</p>
+                          <p className="text-xs text-muted-foreground truncate">{expense.vendor || '-'}</p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <ResponsiveTable
+                  columns={[
+                    {
+                      key: 'expense_date',
+                      label: 'Date',
+                      render: (value: string) => new Date(value).toLocaleDateString()
+                    },
+                    { key: 'description', label: 'Description' },
+                    { key: 'category', label: 'Category' },
+                    { key: 'vendor', label: 'Vendor' },
+                    { key: 'payment_method', label: 'Payment' },
+                    {
+                      key: 'amount',
+                      label: 'Amount',
+                      className: 'text-right font-semibold',
+                      render: (value: number) => `₱${Number(value).toLocaleString()}`
+                    }
+                  ]}
+                  data={filteredExpenses}
+                  onRowClick={(expense) => {
+                    setSelectedExpense(expense);
+                    setDetailDialogOpen(true);
+                  }}
+                  emptyMessage="No expenses found"
+                />
+              )}
             </Card>
           </TabsContent>
 
