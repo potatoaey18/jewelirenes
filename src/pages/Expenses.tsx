@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { VendorDirectory } from '@/components/expenses/VendorDirectory';
 import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
+import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
@@ -29,6 +30,8 @@ export default function Expenses() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({
     amount: '',
@@ -468,7 +471,14 @@ export default function Expenses() {
                   </TableHeader>
                   <TableBody>
                     {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id} className="text-base">
+                      <TableRow 
+                        key={expense.id} 
+                        className="text-base cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => {
+                          setSelectedExpense(expense);
+                          setDetailDialogOpen(true);
+                        }}
+                      >
                         <TableCell className="py-4">{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
                         <TableCell className="py-4">{expense.description}</TableCell>
                         <TableCell className="py-4">{expense.category}</TableCell>
@@ -491,6 +501,12 @@ export default function Expenses() {
             <ExpenseBankChecks />
           </TabsContent>
         </Tabs>
+
+        <ExpenseDetailDialog
+          expense={selectedExpense}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+        />
       </div>
     </div>
   );
