@@ -19,6 +19,7 @@ import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
+import { CsvImport } from '@/components/CsvImport';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
@@ -222,6 +223,44 @@ export default function Expenses() {
                 className="pl-10 sm:pl-12 h-10 sm:h-12 text-sm sm:text-base"
               />
             </div>
+            <CsvImport
+              title="Import Expenses"
+              columns={[
+                { key: "amount", label: "Amount", required: true },
+                { key: "expense_date", label: "Date (YYYY-MM-DD)", required: true },
+                { key: "category", label: "Category", required: true },
+                { key: "vendor", label: "Vendor Name" },
+                { key: "description", label: "Description" },
+                { key: "payment_method", label: "Payment Method" },
+                { key: "notes", label: "Notes" },
+              ]}
+              sampleData={[
+                { amount: "5000", expense_date: "2024-01-15", category: "Supplies", vendor: "ABC Supplies", description: "Office supplies", payment_method: "Cash", notes: "Monthly restock" },
+                { amount: "15000", expense_date: "2024-01-20", category: "Utilities", vendor: "Electric Company", description: "Electric bill", payment_method: "Bank Transfer", notes: "" },
+              ]}
+              onImport={async (data) => {
+                if (!user?.id) throw new Error("User not authenticated");
+                const validCategories = ["Supplies", "Utilities", "Rent", "Salaries", "Marketing", "Equipment", "Other"];
+                const expenses = data.map(row => {
+                  if (!validCategories.includes(row.category)) {
+                    throw new Error(`Invalid category "${row.category}". Valid: ${validCategories.join(", ")}`);
+                  }
+                  return {
+                    amount: parseFloat(row.amount) || 0,
+                    expense_date: row.expense_date,
+                    category: row.category,
+                    vendor: row.vendor || null,
+                    description: row.description || null,
+                    payment_method: row.payment_method || null,
+                    notes: row.notes || null,
+                    created_by: user.id,
+                  };
+                });
+                const { error } = await supabase.from("expenses").insert(expenses);
+                if (error) throw error;
+                queryClient.invalidateQueries({ queryKey: ['expenses'] });
+              }}
+            />
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full md:w-auto h-10 sm:h-12">
