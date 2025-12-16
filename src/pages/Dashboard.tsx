@@ -543,63 +543,63 @@ const Dashboard = () => {
             </Select>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Cash Column */}
               <div 
-                className="bg-green-500/10 rounded-lg p-4 flex items-center gap-4 cursor-pointer hover:bg-green-500/20 transition-colors"
+                className="bg-green-500/10 rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer hover:bg-green-500/20 transition-colors"
                 onClick={() => fetchPaymentDetails("cash")}
               >
-                <div className="bg-green-500/20 p-3 rounded-full">
-                  <Banknote className="h-6 w-6 text-green-600" />
+                <div className="bg-green-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
+                  <Banknote className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cash ({periodLabel})</p>
-                  <p className="text-2xl font-bold text-green-600">₱{cashOnlineStats.cashReceived.toLocaleString()}</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Cash ({periodLabel})</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">₱{cashOnlineStats.cashReceived.toLocaleString()}</p>
                 </div>
               </div>
 
               {/* Online Payments Column */}
               <div 
-                className="bg-blue-500/10 rounded-lg p-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
+                className="bg-blue-500/10 rounded-lg p-3 sm:p-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
                 onClick={() => fetchPaymentDetails("online", "gcash")}
               >
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="bg-blue-500/20 p-3 rounded-full">
-                    <Smartphone className="h-6 w-6 text-blue-600" />
+                <div className="flex items-center gap-3 sm:gap-4 mb-3">
+                  <div className="bg-blue-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
+                    <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Online ({periodLabel})</p>
-                    <p className="text-2xl font-bold text-blue-600">₱{totalOnlinePayments.toLocaleString()}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Online ({periodLabel})</p>
+                    <p className="text-lg sm:text-2xl font-bold text-blue-600 truncate">₱{totalOnlinePayments.toLocaleString()}</p>
                   </div>
                 </div>
                 {/* Sub-columns for GCash, BDO, BPI */}
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-blue-500/20">
+                <div className="grid grid-cols-3 gap-1 sm:gap-2 pt-3 border-t border-blue-500/20">
                   <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">GCash</p>
-                    <p className="text-sm font-semibold text-blue-600">₱{cashOnlineStats.gcashReceived.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">GCash</p>
+                    <p className="text-xs sm:text-sm font-semibold text-blue-600 truncate">₱{cashOnlineStats.gcashReceived.toLocaleString()}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">BDO</p>
-                    <p className="text-sm font-semibold text-orange-600">₱{cashOnlineStats.bdoReceived.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">BDO</p>
+                    <p className="text-xs sm:text-sm font-semibold text-orange-600 truncate">₱{cashOnlineStats.bdoReceived.toLocaleString()}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">BPI</p>
-                    <p className="text-sm font-semibold text-purple-600">₱{cashOnlineStats.bpiReceived.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">BPI</p>
+                    <p className="text-xs sm:text-sm font-semibold text-purple-600 truncate">₱{cashOnlineStats.bpiReceived.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
 
               {/* Check Collections Column */}
               <div 
-                className="bg-amber-500/10 rounded-lg p-4 flex items-center gap-4 cursor-pointer hover:bg-amber-500/20 transition-colors"
+                className="bg-amber-500/10 rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer hover:bg-amber-500/20 transition-colors sm:col-span-2 lg:col-span-1"
                 onClick={() => fetchPaymentDetails("check")}
               >
-                <div className="bg-amber-500/20 p-3 rounded-full">
-                  <CreditCard className="h-6 w-6 text-amber-600" />
+                <div className="bg-amber-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
+                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Checks ({periodLabel})</p>
-                  <p className="text-2xl font-bold text-amber-600">₱{cashOnlineStats.checkReceived.toLocaleString()}</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Checks ({periodLabel})</p>
+                  <p className="text-lg sm:text-2xl font-bold text-amber-600 truncate">₱{cashOnlineStats.checkReceived.toLocaleString()}</p>
                 </div>
               </div>
             </div>

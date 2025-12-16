@@ -255,19 +255,19 @@ const Sales = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        <Tabs defaultValue="shop" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="shop" className="gap-2">
-              <Package className="h-4 w-4" />
-              Shop
+        <Tabs defaultValue="shop" className="space-y-4 sm:space-y-6">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+            <TabsTrigger value="shop" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Shop</span>
             </TabsTrigger>
-            <TabsTrigger value="sold" className="gap-2">
-              <CreditCard className="h-4 w-4" />
-              Sold Items ({soldTransactions.length})
+            <TabsTrigger value="sold" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Sold</span> ({soldTransactions.length})
             </TabsTrigger>
-            <TabsTrigger value="bin" className="gap-2">
-              <Trash2 className="h-4 w-4" />
-              Bin ({deletedTransactions.length})
+            <TabsTrigger value="bin" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Bin</span> ({deletedTransactions.length})
             </TabsTrigger>
           </TabsList>
 
@@ -401,9 +401,9 @@ const Sales = () => {
 
           {/* Sold Items Tab */}
           <TabsContent value="sold">
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-6">Sold Items</h2>
-              <div className="overflow-x-auto">
+            <Card className="p-3 sm:p-6">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Sold Items</h2>
+              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -469,15 +469,15 @@ const Sales = () => {
 
           {/* Bin Tab */}
           <TabsContent value="bin">
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Archive className="h-6 w-6 text-muted-foreground" />
-                <h2 className="text-2xl font-bold">Bin</h2>
+            <Card className="p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                <h2 className="text-xl sm:text-2xl font-bold">Bin</h2>
               </div>
-              <p className="text-muted-foreground mb-6">
-                Deleted transactions can be restored or permanently deleted from here.
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
+                Deleted transactions can be restored or permanently deleted.
               </p>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>

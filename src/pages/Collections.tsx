@@ -330,11 +330,11 @@ export default function Collections() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Collections</h1>
-            <p className="text-muted-foreground">Manage installment plans and payments</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Collections</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Manage installment plans and payments</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -438,32 +438,31 @@ export default function Collections() {
           </Dialog>
         </div>
 
-        <Tabs defaultValue="plans" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="plans">Payment Plans</TabsTrigger>
-            <TabsTrigger value="payments">Payment History</TabsTrigger>
-            <TabsTrigger value="checks">Bank Checks</TabsTrigger>
+        <Tabs defaultValue="plans" className="space-y-4 sm:space-y-6">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+            <TabsTrigger value="plans" className="text-xs sm:text-sm">Plans</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs sm:text-sm">History</TabsTrigger>
+            <TabsTrigger value="checks" className="text-xs sm:text-sm">Checks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="plans">
-            <Card className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+            <Card className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 mb-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Search by customer name..."
+                    placeholder="Search by customer..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-10"
                   />
                 </div>
-                <Button variant="outline" onClick={handleExportPaymentPlansPDF}>
+                <Button variant="outline" onClick={handleExportPaymentPlansPDF} className="w-full sm:w-auto">
                   <Download className="mr-2 h-4 w-4" />
                   Export PDF
                 </Button>
               </div>
-
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>

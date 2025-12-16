@@ -59,15 +59,15 @@ export default function Logs() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Activity Logs</h1>
-          <p className="text-muted-foreground">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">Activity Logs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {isAdmin ? 'View all user activity' : 'View your activity history'}
           </p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-3 sm:p-6">
           <div className="mb-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -80,7 +80,7 @@ export default function Logs() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
             <Table>
               <TableHeader>
                 <TableRow>
