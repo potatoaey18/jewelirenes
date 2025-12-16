@@ -400,16 +400,6 @@ export default function Expenses() {
                             placeholder="Enter invoice number"
                           />
                         </div>
-                        <div>
-                          <Label htmlFor="expiry_date" className="text-base font-semibold mb-2 block">Expiry Date</Label>
-                          <Input
-                            id="expiry_date"
-                            type="date"
-                            value={formData.expiry_date}
-                            onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
-                            className="h-12 text-base"
-                          />
-                        </div>
                       </>
                     )}
 
