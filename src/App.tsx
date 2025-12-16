@@ -10,6 +10,7 @@ import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import Expenses from "./pages/Expenses";
+import VendorDetail from "./pages/VendorDetail";
 import Collections from "./pages/Collections";
 import Files from "./pages/Files";
 import Logs from "./pages/Logs";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
             <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+            <Route path="/expenses/vendor/:vendorName" element={<ProtectedRoute><VendorDetail /></ProtectedRoute>} />
             <Route path="/collections" element={<ProtectedRoute><Collections /></ProtectedRoute>} />
             <Route path="/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
             <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />

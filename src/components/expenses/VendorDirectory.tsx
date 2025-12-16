@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Building2, Receipt, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Building2, Receipt, Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,6 +29,7 @@ interface VendorSummary {
 
 export function VendorDirectory({ expenses }: VendorDirectoryProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
@@ -275,8 +277,14 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
             </TableHeader>
             <TableBody>
               {filteredVendors.map((vendor) => (
-                <TableRow key={vendor.name}>
-                  <TableCell className="py-4 font-medium">{vendor.name}</TableCell>
+                <TableRow 
+                  key={vendor.name} 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/expenses/vendor/${encodeURIComponent(vendor.name)}`)}
+                >
+                  <TableCell className="py-4 font-medium text-primary hover:underline">
+                    {vendor.name}
+                  </TableCell>
                   <TableCell className="py-4">
                     <div className="flex flex-wrap gap-1">
                       {vendor.categories.slice(0, 3).map((cat) => (
@@ -299,7 +307,14 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
                     ₱{vendor.totalAmount.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right py-4">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => navigate(`/expenses/vendor/${encodeURIComponent(vendor.name)}`)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Dialog open={dialogOpen && editingVendor === vendor.name} onOpenChange={handleDialogClose}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)}>
