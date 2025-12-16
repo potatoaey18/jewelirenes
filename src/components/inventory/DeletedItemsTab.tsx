@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -15,91 +15,88 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ItemDetailsDialog } from "./ItemDetailsDialog";
 
-interface FinishedItemsTabProps {
+interface DeletedItemsTabProps {
   refreshTrigger: number;
-  onEdit: (item: any) => void;
+  onRestore: () => void;
 }
 
-export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabProps) {
+export function DeletedItemsTab({ refreshTrigger, onRestore }: DeletedItemsTabProps) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchItems();
+    fetchDeletedItems();
   }, [refreshTrigger]);
 
-  const fetchItems = async () => {
+  const fetchDeletedItems = async () => {
     try {
       const { data, error } = await supabase
         .from("finished_items")
         .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
 
       if (error) throw error;
       setItems(data || []);
     } catch (error) {
-      console.error("Error fetching items:", error);
-      toast.error("Failed to fetch items");
+      console.error("Error fetching deleted items:", error);
+      toast.error("Failed to fetch deleted items");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-
+  const handleRestore = async (id: string) => {
     try {
-      // Soft delete - set deleted_at timestamp
       const { error } = await supabase
         .from("finished_items")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", deleteId);
+        .update({ deleted_at: null })
+        .eq("id", id);
 
       if (error) throw error;
 
-      toast.success("Item moved to bin");
-      fetchItems();
+      toast.success("Item restored successfully");
+      fetchDeletedItems();
+      onRestore();
     } catch (error) {
-      console.error("Error deleting item:", error);
-      toast.error("Failed to delete item");
-    } finally {
-      setDeleteId(null);
+      console.error("Error restoring item:", error);
+      toast.error("Failed to restore item");
     }
   };
 
-  const viewDetails = async (item: any) => {
+  const handlePermanentDelete = async () => {
+    if (!permanentDeleteId) return;
+
     try {
-      const { data: materials, error: matError } = await supabase
+      // Delete related item_materials first
+      await supabase
         .from("item_materials")
-        .select(`
-          *,
-          raw_materials (*)
-        `)
-        .eq("item_id", item.id);
+        .delete()
+        .eq("item_id", permanentDeleteId);
 
-      const { data: labor, error: laborError } = await supabase
+      // Delete related item_labor
+      await supabase
         .from("item_labor")
-        .select("*")
-        .eq("item_id", item.id);
+        .delete()
+        .eq("item_id", permanentDeleteId);
 
-      if (matError) throw matError;
-      if (laborError) throw laborError;
+      // Delete the item
+      const { error } = await supabase
+        .from("finished_items")
+        .delete()
+        .eq("id", permanentDeleteId);
 
-      setSelectedItem({
-        ...item,
-        materials: materials || [],
-        labor: labor || []
-      });
-      setDetailsOpen(true);
+      if (error) throw error;
+
+      toast.success("Item permanently deleted");
+      fetchDeletedItems();
     } catch (error) {
-      console.error("Error fetching item details:", error);
-      toast.error("Failed to fetch item details");
+      console.error("Error permanently deleting item:", error);
+      toast.error("Failed to permanently delete item");
+    } finally {
+      setPermanentDeleteId(null);
     }
   };
 
@@ -107,25 +104,34 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
     return <div className="text-center py-8">Loading...</div>;
   }
 
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Trash2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <p>No deleted items</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
-          <Card key={item.id} className="hover:shadow-lg transition-shadow">
+          <Card key={item.id} className="hover:shadow-lg transition-shadow opacity-75">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">SKU: {item.sku}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(item.date_manufactured).toLocaleDateString()}
+                    Deleted: {new Date(item.deleted_at).toLocaleDateString()}
                   </p>
                 </div>
                 {item.image_url && (
                   <img
                     src={item.image_url}
                     alt={item.name}
-                    className="w-16 h-16 object-cover rounded-md ml-2"
+                    className="w-16 h-16 object-cover rounded-md ml-2 opacity-50"
                   />
                 )}
               </div>
@@ -143,22 +149,24 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Stock</p>
-                <Badge variant={item.stock > 5 ? "default" : item.stock > 0 ? "secondary" : "destructive"}>
+                <Badge variant="secondary">
                   {item.stock} units
                 </Badge>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => viewDetails(item)} className="flex-1">
-                  <Eye className="w-4 h-4 mr-1" />
-                  Details
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => onEdit(item)}>
-                  <Edit className="w-4 h-4" />
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleRestore(item.id)} 
+                  className="flex-1"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Restore
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
-                  onClick={() => setDeleteId(item.id)}
+                  variant="destructive"
+                  onClick={() => setPermanentDeleteId(item.id)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -168,26 +176,22 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
         ))}
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-      <AlertDialogContent>
+      <AlertDialog open={!!permanentDeleteId} onOpenChange={() => setPermanentDeleteId(null)}>
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Move to Bin</AlertDialogTitle>
+            <AlertDialogTitle>Permanently Delete Item</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to move this item to the bin? You can restore it later.
+              Are you sure you want to permanently delete this item? This action cannot be undone and will also remove all associated materials and labor records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Move to Bin</AlertDialogAction>
+            <AlertDialogAction onClick={handlePermanentDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Forever
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <ItemDetailsDialog
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        item={selectedItem}
-      />
     </>
   );
 }

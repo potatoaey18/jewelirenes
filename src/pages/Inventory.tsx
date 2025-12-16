@@ -2,9 +2,10 @@ import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, Package, Layers, Trash2 } from "lucide-react";
 import { FinishedItemsTab } from "@/components/inventory/FinishedItemsTab";
 import { RawMaterialsTab } from "@/components/inventory/RawMaterialsTab";
+import { DeletedItemsTab } from "@/components/inventory/DeletedItemsTab";
 import { FinishedItemDialog } from "@/components/inventory/FinishedItemDialog";
 import { RawMaterialDialog } from "@/components/inventory/RawMaterialDialog";
 import { CsvImport, CsvSampleDownload } from "@/components/CsvImport";
@@ -13,7 +14,6 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { formatCurrencyForPDF } from "@/lib/pdfUtils";
-
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState("items");
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
@@ -128,9 +128,21 @@ export default function Inventory() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="items" className="text-xs sm:text-sm">Finished Items</TabsTrigger>
-            <TabsTrigger value="materials" className="text-xs sm:text-sm">Raw Materials</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="items" className="text-xs sm:text-sm gap-1">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Finished Items</span>
+              <span className="xs:hidden">Items</span>
+            </TabsTrigger>
+            <TabsTrigger value="materials" className="text-xs sm:text-sm gap-1">
+              <Layers className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Raw Materials</span>
+              <span className="xs:hidden">Materials</span>
+            </TabsTrigger>
+            <TabsTrigger value="bin" className="text-xs sm:text-sm gap-1">
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              Bin
+            </TabsTrigger>
           </TabsList>
 
           <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2">
@@ -231,6 +243,13 @@ export default function Inventory() {
                 setSelectedMaterial(material);
                 setIsMaterialDialogOpen(true);
               }}
+            />
+          </TabsContent>
+
+          <TabsContent value="bin" className="mt-6">
+            <DeletedItemsTab 
+              refreshTrigger={refreshTrigger}
+              onRestore={handleSuccess}
             />
           </TabsContent>
         </Tabs>
