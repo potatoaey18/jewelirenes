@@ -286,14 +286,14 @@ const Customers = () => {
         </div>
 
         <Tabs defaultValue="directory" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="directory">Customer Directory</TabsTrigger>
-            <TabsTrigger value="history">Master History</TabsTrigger>
+          <TabsList className="mb-4 sm:mb-6 w-full sm:w-auto grid grid-cols-2 sm:flex">
+            <TabsTrigger value="directory" className="text-xs sm:text-sm">Directory</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">Master History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="directory">
-            <div className="flex justify-between items-center mb-6 gap-4">
-              <div className="relative max-w-full sm:max-w-md flex-1">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
+              <div className="relative flex-1 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search customers..."
@@ -305,7 +305,7 @@ const Customers = () => {
               <Button
                 onClick={handleExportCustomersPDF}
                 variant="outline"
-                className="flex-shrink-0"
+                className="w-full sm:w-auto flex-shrink-0"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Export PDF
@@ -394,10 +394,11 @@ const Customers = () => {
           </TabsContent>
 
           <TabsContent value="history">
-            <div className="flex justify-end gap-2 mb-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4 sm:mb-6">
               <Button
                 onClick={handleExportMasterHistoryImage}
                 variant="outline"
+                className="w-full sm:w-auto"
               >
                 <ImageIcon className="mr-2 h-4 w-4" />
                 Export Image
@@ -405,13 +406,14 @@ const Customers = () => {
               <Button
                 onClick={handleExportMasterHistoryPDF}
                 variant="outline"
+                className="w-full sm:w-auto"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Export PDF
               </Button>
             </div>
 
-            <Card>
+            <Card className="overflow-hidden">
               <div ref={masterHistoryRef} className="overflow-x-auto">
                 <Table>
                   <TableHeader>

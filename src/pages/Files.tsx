@@ -282,40 +282,40 @@ const Files = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
 
-      <main className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h2 className="text-4xl font-bold mb-2">File Management</h2>
-            <p className="text-muted-foreground">Organize and manage your files</p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">File Management</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">Organize and manage your files</p>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="all" className="gap-2">
-              <Folder className="h-4 w-4" />
-              All Files
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+            <TabsTrigger value="all" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Folder className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">All</span>
             </TabsTrigger>
-            <TabsTrigger value="clients" className="gap-2">
-              <Users className="h-4 w-4" />
-              Clients ({customers.length})
+            <TabsTrigger value="clients" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Clients</span> ({customers.length})
             </TabsTrigger>
-            <TabsTrigger value="vendors" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              Vendors ({vendors.length})
+            <TabsTrigger value="vendors" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Vendors</span> ({vendors.length})
             </TabsTrigger>
           </TabsList>
 
           {/* All Files Tab */}
           <TabsContent value="all">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
               <div>
-                <p className="text-muted-foreground">Current path: {getCurrentPath()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Path: {getCurrentPath()}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
                   onClick={() => setFolderDialogOpen(true)}
-                  className="bg-accent hover:bg-accent/90"
+                  className="bg-accent hover:bg-accent/90 w-full sm:w-auto"
                 >
                   <FolderPlus className="mr-2 h-4 w-4" />
                   New Folder
@@ -328,7 +328,7 @@ const Files = () => {
                 />
                 <Label
                   htmlFor="file-upload"
-                  className="flex items-center gap-2 cursor-pointer bg-accent text-accent-foreground px-4 py-2 rounded-md hover:bg-accent/90"
+                  className="flex items-center justify-center gap-2 cursor-pointer bg-accent text-accent-foreground px-4 py-2 rounded-md hover:bg-accent/90 w-full sm:w-auto"
                 >
                   <Upload className="h-4 w-4" />
                   Upload File
@@ -346,20 +346,20 @@ const Files = () => {
               </Button>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
               {folders.map((folder) => (
                 <Card
                   key={folder.id}
                   className="cursor-pointer hover:shadow-lg transition-all group"
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div
                       className="flex flex-col items-center text-center"
                       onClick={() => setCurrentFolder(folder.id)}
                     >
-                      <Folder className="h-16 w-16 text-accent mb-2" />
-                      <p className="font-medium truncate w-full">{folder.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <Folder className="h-10 w-10 sm:h-16 sm:w-16 text-accent mb-2" />
+                      <p className="font-medium truncate w-full text-sm sm:text-base">{folder.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {format(new Date(folder.created_at), "PP")}
                       </p>
                     </div>
@@ -380,14 +380,14 @@ const Files = () => {
 
               {files.map((file) => (
                 <Card key={file.id} className="hover:shadow-lg transition-all group">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col items-center text-center">
-                      <File className="h-16 w-16 text-muted-foreground mb-2" />
-                      <p className="font-medium truncate w-full text-sm">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <File className="h-10 w-10 sm:h-16 sm:w-16 text-muted-foreground mb-2" />
+                      <p className="font-medium truncate w-full text-xs sm:text-sm">{file.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {(file.file_size / 1024).toFixed(1)} KB
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {format(new Date(file.created_at), "PP")}
                       </p>
                     </div>
@@ -431,20 +431,20 @@ const Files = () => {
 
           {/* Clients Tab */}
           <TabsContent value="clients">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
               {customerFilesGrouped.map((customer) => (
                 <Card
                   key={customer.id}
                   className="cursor-pointer hover:shadow-lg transition-all"
                   onClick={() => window.location.href = `/customers/${customer.id}`}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col items-center text-center">
-                      <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-                        <Users className="h-8 w-8 text-primary" />
+                      <div className="h-10 w-10 sm:h-16 sm:w-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <Users className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
                       </div>
-                      <p className="font-medium truncate w-full">{customer.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium truncate w-full text-sm sm:text-base">{customer.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {customer.files.length} file(s)
                       </p>
                     </div>
@@ -462,19 +462,19 @@ const Files = () => {
 
           {/* Vendors Tab */}
           <TabsContent value="vendors">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
               {vendorFilesGrouped.map((vendor) => (
                 <Card
                   key={vendor.name}
                   className="hover:shadow-lg transition-all"
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col items-center text-center">
-                      <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center mb-2">
-                        <Building2 className="h-8 w-8 text-accent" />
+                      <div className="h-10 w-10 sm:h-16 sm:w-16 bg-accent/10 rounded-full flex items-center justify-center mb-2">
+                        <Building2 className="h-5 w-5 sm:h-8 sm:w-8 text-accent" />
                       </div>
-                      <p className="font-medium truncate w-full">{vendor.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium truncate w-full text-sm sm:text-base">{vendor.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {vendor.files.length} file(s)
                       </p>
                     </div>

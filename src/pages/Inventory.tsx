@@ -127,19 +127,19 @@ export default function Inventory() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="items">Finished Items</TabsTrigger>
-            <TabsTrigger value="materials">Raw Materials</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="items" className="text-xs sm:text-sm">Finished Items</TabsTrigger>
+            <TabsTrigger value="materials" className="text-xs sm:text-sm">Raw Materials</TabsTrigger>
           </TabsList>
 
-          <div className="flex flex-wrap justify-end gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2">
             {activeTab === "items" && (
               <>
-                <Button onClick={exportItemsPDF} variant="outline">
+                <Button onClick={exportItemsPDF} variant="outline" className="w-full sm:w-auto">
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button onClick={handleAddItem}>
+                <Button onClick={handleAddItem} className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Item
                 </Button>
@@ -147,11 +147,11 @@ export default function Inventory() {
             )}
             {activeTab === "materials" && (
               <>
-                <Button onClick={exportMaterialsPDF} variant="outline">
+                <Button onClick={exportMaterialsPDF} variant="outline" className="w-full sm:w-auto">
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button onClick={handleAddMaterial}>
+                <Button onClick={handleAddMaterial} className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Material
                 </Button>

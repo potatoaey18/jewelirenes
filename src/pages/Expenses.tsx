@@ -206,25 +206,25 @@ export default function Expenses() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-bold mb-2">Expenses</h1>
-            <p className="text-muted-foreground text-lg">Track and manage business expenses</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-1 sm:mb-2">Expenses</h1>
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground">Track and manage business expenses</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-80">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64 lg:w-80">
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
               <Input
                 placeholder="Search expenses..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-12 h-12 text-base"
+                className="pl-10 sm:pl-12 h-10 sm:h-12 text-sm sm:text-base"
               />
             </div>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full md:w-auto h-12">
+                <Button className="w-full md:w-auto h-10 sm:h-12">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Expense
                 </Button>
@@ -432,32 +432,32 @@ export default function Expenses() {
           </div>
         </div>
 
-        <Card className="mb-8 p-8">
+        <Card className="mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-base text-muted-foreground mb-2">Total Expenses</p>
-              <p className="text-4xl sm:text-5xl font-bold">₱{totalExpenses.toFixed(2)}</p>
+              <p className="text-sm sm:text-base text-muted-foreground mb-1 sm:mb-2">Total Expenses</p>
+              <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">₱{totalExpenses.toFixed(2)}</p>
             </div>
           </div>
         </Card>
 
-        <Tabs defaultValue="expenses" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="vendors">Vendor Directory</TabsTrigger>
-            <TabsTrigger value="bank-checks">Bank Checks</TabsTrigger>
+        <Tabs defaultValue="expenses" className="space-y-4 sm:space-y-6">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+            <TabsTrigger value="expenses" className="text-xs sm:text-sm">Expenses</TabsTrigger>
+            <TabsTrigger value="vendors" className="text-xs sm:text-sm">Vendors</TabsTrigger>
+            <TabsTrigger value="bank-checks" className="text-xs sm:text-sm">Checks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="expenses">
-            <Card className="p-6 sm:p-8">
-              <div className="flex justify-end mb-6">
-                <Button variant="outline" onClick={handleExportPDF}>
+            <Card className="p-3 sm:p-6 lg:p-8">
+              <div className="flex justify-end mb-4 sm:mb-6">
+                <Button variant="outline" onClick={handleExportPDF} className="w-full sm:w-auto">
                   <Download className="mr-2 h-4 w-4" />
                   Export PDF
                 </Button>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="text-base">
