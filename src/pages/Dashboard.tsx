@@ -7,10 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { TrendDialog } from "@/components/dashboard/TrendDialog";
 import { CashCheckSummaryDialog } from "@/components/dashboard/CashCheckSummaryDialog";
 import { CashOnlinePaymentDialog } from "@/components/dashboard/CashOnlinePaymentDialog";
+import { DashboardSettings } from "@/components/dashboard/DashboardSettings";
 import { useNavigate } from "react-router-dom";
 import { format, startOfDay, startOfWeek, startOfMonth, subDays, subYears } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type TrendPeriod = "weekly" | "monthly" | "yearly";
+type ViewMode = "cards" | "table";
 
 interface TransactionSummary {
   id: string;
@@ -25,6 +28,11 @@ interface TransactionSummary {
 type PeriodFilter = "daily" | "weekly" | "monthly";
 
 const Dashboard = () => {
+  const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem("dashboard-view-mode");
+    return (stored as ViewMode) || "cards";
+  });
   const [stats, setStats] = useState({
     todaySales: 0,
     todayOrders: 0,
@@ -56,6 +64,11 @@ const Dashboard = () => {
     onlineData?: { gcash: TransactionSummary[]; bdo: TransactionSummary[]; bpi: TransactionSummary[] };
   }>({ open: false, type: "cash", data: [], totalAmount: 0 });
   const navigate = useNavigate();
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem("dashboard-view-mode", mode);
+  };
 
   useEffect(() => {
     fetchStats();
@@ -573,40 +586,74 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
       
-      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Dashboard</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your business today.</p>
+      <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-8">
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1">Dashboard</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Here's what's happening with your business today.</p>
+          </div>
+          <DashboardSettings viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {statsData.map((stat) => (
-            <Card
-              key={stat.title}
-              className="relative overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-              onClick={() => stat.type && fetchTrendData(stat.type)}
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-50`} />
-              <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-accent" />
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl sm:text-3xl font-bold">{stat.value}</div>
-                {stat.trend && <p className="text-xs text-accent mt-1">{stat.trend}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Stats Grid - Cards or Table View */}
+        {viewMode === "cards" ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
+            {statsData.map((stat) => (
+              <Card
+                key={stat.title}
+                className="relative overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+                onClick={() => stat.type && fetchTrendData(stat.type)}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-50`} />
+                <CardHeader className="relative flex flex-row items-center justify-between p-3 sm:pb-2">
+                  <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
+                </CardHeader>
+                <CardContent className="relative p-3 pt-0">
+                  <div className="text-base sm:text-xl lg:text-2xl font-bold">{stat.value}</div>
+                  {stat.trend && <p className="text-[10px] text-accent mt-1">{stat.trend}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="mb-4 sm:mb-8 border-border/50 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs sm:text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-2 sm:p-3 font-medium">Metric</th>
+                    <th className="text-right p-2 sm:p-3 font-medium">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsData.map((stat) => (
+                    <tr 
+                      key={stat.title} 
+                      className="border-t border-border/50 hover:bg-muted/30 cursor-pointer"
+                      onClick={() => stat.type && fetchTrendData(stat.type)}
+                    >
+                      <td className="p-2 sm:p-3 flex items-center gap-2">
+                        <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
+                        <span>{stat.title}</span>
+                      </td>
+                      <td className="p-2 sm:p-3 text-right font-bold">{stat.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         {/* Cash, Online Payments & Check Collections Section */}
-        <Card className="mb-6 sm:mb-8 border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Cash, Online & Check Payments</CardTitle>
+        <Card className="mb-4 sm:mb-8 border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
+            <CardTitle className="text-sm sm:text-lg">Cash, Online & Check</CardTitle>
             <Select value={periodFilter} onValueChange={(value: PeriodFilter) => setPeriodFilter(value)}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[100px] sm:w-[140px] h-8 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -616,64 +663,64 @@ const Dashboard = () => {
               </SelectContent>
             </Select>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
               {/* Cash Column */}
               <div 
-                className="bg-green-500/10 rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer hover:bg-green-500/20 transition-colors"
+                className="bg-green-500/10 rounded-lg p-2 sm:p-4 flex items-center gap-2 sm:gap-4 cursor-pointer hover:bg-green-500/20 transition-colors"
                 onClick={() => fetchPaymentDetails("cash")}
               >
-                <div className="bg-green-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
-                  <Banknote className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                <div className="bg-green-500/20 p-1.5 sm:p-3 rounded-full flex-shrink-0">
+                  <Banknote className="h-4 w-4 sm:h-6 sm:w-6 text-green-600" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Cash ({periodLabel})</p>
-                  <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">₱{cashOnlineStats.cashReceived.toLocaleString()}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Cash ({periodLabel})</p>
+                  <p className="text-sm sm:text-xl font-bold text-green-600 truncate">₱{cashOnlineStats.cashReceived.toLocaleString()}</p>
                 </div>
               </div>
 
               {/* Online Payments Column */}
               <div 
-                className="bg-blue-500/10 rounded-lg p-3 sm:p-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
+                className="bg-blue-500/10 rounded-lg p-2 sm:p-4 cursor-pointer hover:bg-blue-500/20 transition-colors"
                 onClick={() => fetchPaymentDetails("online")}
               >
-                <div className="flex items-center gap-3 sm:gap-4 mb-3">
-                  <div className="bg-blue-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
-                    <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-3">
+                  <div className="bg-blue-500/20 p-1.5 sm:p-3 rounded-full flex-shrink-0">
+                    <Smartphone className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-muted-foreground">Online ({periodLabel})</p>
-                    <p className="text-lg sm:text-2xl font-bold text-blue-600 truncate">₱{totalOnlinePayments.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Online ({periodLabel})</p>
+                    <p className="text-sm sm:text-xl font-bold text-blue-600 truncate">₱{totalOnlinePayments.toLocaleString()}</p>
                   </div>
                 </div>
                 {/* Sub-columns for GCash, BDO, BPI */}
-                <div className="grid grid-cols-3 gap-1 sm:gap-2 pt-3 border-t border-blue-500/20">
+                <div className="grid grid-cols-3 gap-1 pt-2 border-t border-blue-500/20">
                   <div className="text-center">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">GCash</p>
-                    <p className="text-xs sm:text-sm font-semibold text-blue-600 truncate">₱{cashOnlineStats.gcashReceived.toLocaleString()}</p>
+                    <p className="text-[8px] sm:text-xs text-muted-foreground mb-0.5">GCash</p>
+                    <p className="text-[10px] sm:text-sm font-semibold text-blue-600 truncate">₱{cashOnlineStats.gcashReceived.toLocaleString()}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">BDO</p>
-                    <p className="text-xs sm:text-sm font-semibold text-orange-600 truncate">₱{cashOnlineStats.bdoReceived.toLocaleString()}</p>
+                    <p className="text-[8px] sm:text-xs text-muted-foreground mb-0.5">BDO</p>
+                    <p className="text-[10px] sm:text-sm font-semibold text-orange-600 truncate">₱{cashOnlineStats.bdoReceived.toLocaleString()}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">BPI</p>
-                    <p className="text-xs sm:text-sm font-semibold text-purple-600 truncate">₱{cashOnlineStats.bpiReceived.toLocaleString()}</p>
+                    <p className="text-[8px] sm:text-xs text-muted-foreground mb-0.5">BPI</p>
+                    <p className="text-[10px] sm:text-sm font-semibold text-purple-600 truncate">₱{cashOnlineStats.bpiReceived.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
 
               {/* Check Collections Column */}
               <div 
-                className="bg-amber-500/10 rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer hover:bg-amber-500/20 transition-colors sm:col-span-2 lg:col-span-1"
+                className="bg-amber-500/10 rounded-lg p-2 sm:p-4 flex items-center gap-2 sm:gap-4 cursor-pointer hover:bg-amber-500/20 transition-colors sm:col-span-2 lg:col-span-1"
                 onClick={() => fetchPaymentDetails("check")}
               >
-                <div className="bg-amber-500/20 p-2 sm:p-3 rounded-full flex-shrink-0">
-                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
+                <div className="bg-amber-500/20 p-1.5 sm:p-3 rounded-full flex-shrink-0">
+                  <CreditCard className="h-4 w-4 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Checks ({periodLabel})</p>
-                  <p className="text-lg sm:text-2xl font-bold text-amber-600 truncate">₱{cashOnlineStats.checkReceived.toLocaleString()}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Checks ({periodLabel})</p>
+                  <p className="text-sm sm:text-xl font-bold text-amber-600 truncate">₱{cashOnlineStats.checkReceived.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -681,13 +728,13 @@ const Dashboard = () => {
         </Card>
 
         <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>Recent Sales</CardTitle>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-sm sm:text-lg">Recent Sales</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="space-y-2 sm:space-y-4">
               {recentSales.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No recent sales</p>
+                <p className="text-center text-muted-foreground py-6 text-xs sm:text-sm">No recent sales</p>
               ) : (
                 recentSales.map((sale) => {
                   const productName = sale.transaction_items?.[0]?.product_name || "Multiple items";
@@ -696,14 +743,12 @@ const Dashboard = () => {
                   return (
                     <div
                       key={sale.id}
-                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors gap-3 sm:gap-0"
+                      className="flex items-center justify-between p-2 sm:p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors gap-2"
                     >
-                      <div className="w-full sm:w-auto">
-                        <p className="font-medium text-sm sm:text-base">{productName}</p>
-                      </div>
-                      <div className="text-left sm:text-right w-full sm:w-auto">
-                        <p className="font-bold text-accent text-sm sm:text-base">₱{Number(sale.total_amount).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                      <p className="font-medium text-xs sm:text-sm truncate flex-1">{productName}</p>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-accent text-xs sm:text-sm">₱{Number(sale.total_amount).toLocaleString()}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">{timeAgo}</p>
                       </div>
                     </div>
                   );
