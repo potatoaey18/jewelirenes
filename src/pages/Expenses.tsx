@@ -43,7 +43,9 @@ export default function Expenses() {
     check_number: '',
     check_date: '',
     bank: '',
-    branch: ''
+    branch: '',
+    invoice_number: '',
+    expiry_date: ''
   });
 
   const { data: expenses = [] } = useQuery({
@@ -102,9 +104,9 @@ export default function Expenses() {
           check_number: data.check_number,
           check_date: data.check_date,
           amount: data.amount,
-          invoice_number: null,
+          invoice_number: data.invoice_number || null,
           date_received: data.expense_date,
-          expiry_date: null,
+          expiry_date: data.expiry_date || null,
           status: 'Not Yet',
           notes: data.notes,
           created_by: user?.id
@@ -144,7 +146,9 @@ export default function Expenses() {
       check_number: '',
       check_date: '',
       bank: '',
-      branch: ''
+      branch: '',
+      invoice_number: '',
+      expiry_date: ''
     });
   };
 
@@ -161,8 +165,10 @@ export default function Expenses() {
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
-  const showReferenceFields = ONLINE_PAYMENT_METHODS.includes(formData.payment_method) || formData.payment_method === CHECK_PAYMENT_METHOD;
-  const showCheckFields = formData.payment_method === CHECK_PAYMENT_METHOD;
+  const isCheckPayment = formData.payment_method === CHECK_PAYMENT_METHOD;
+  const isCardPayment = ['Credit Card', 'Debit Card'].includes(formData.payment_method);
+  const isOnlinePayment = ['GCash', 'BDO', 'BPI', 'Bank Transfer'].includes(formData.payment_method);
+  const showTransactionFields = isCardPayment || isOnlinePayment;
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -295,21 +301,25 @@ export default function Expenses() {
                       </Select>
                     </div>
                     
-                    {/* Reference fields for Check and Online payments */}
-                    {showReferenceFields && (
+                    {/* Card/Online Payment Transaction Fields */}
+                    {showTransactionFields && (
                       <>
                         <div>
-                          <Label htmlFor="reference_number" className="text-base font-semibold mb-2 block">Reference Number</Label>
+                          <Label htmlFor="reference_number" className="text-base font-semibold mb-2 block">
+                            {isCardPayment ? 'Transaction/Reference Number' : 'Reference Number'}
+                          </Label>
                           <Input
                             id="reference_number"
                             value={formData.reference_number}
                             onChange={(e) => setFormData({...formData, reference_number: e.target.value})}
                             className="h-12 text-base"
-                            placeholder="Enter reference number"
+                            placeholder={isCardPayment ? "Enter transaction number" : "Enter reference number"}
                           />
                         </div>
                         <div>
-                          <Label htmlFor="account_name" className="text-base font-semibold mb-2 block">Account Name</Label>
+                          <Label htmlFor="account_name" className="text-base font-semibold mb-2 block">
+                            {isCardPayment ? 'Card Holder / Account Name' : 'Account Name'}
+                          </Label>
                           <Input
                             id="account_name"
                             value={formData.account_name}
@@ -318,12 +328,46 @@ export default function Expenses() {
                             placeholder="Enter account name"
                           />
                         </div>
+                        {isOnlinePayment && (
+                          <div>
+                            <Label htmlFor="bank" className="text-base font-semibold mb-2 block">Bank / Provider</Label>
+                            <Input
+                              id="bank"
+                              value={formData.bank}
+                              onChange={(e) => setFormData({...formData, bank: e.target.value})}
+                              className="h-12 text-base"
+                              placeholder="Enter bank or provider name"
+                            />
+                          </div>
+                        )}
                       </>
                     )}
 
-                    {/* Additional Check-specific fields */}
-                    {showCheckFields && (
+                    {/* Check Payment Fields - matching Bank Check form */}
+                    {isCheckPayment && (
                       <>
+                        <div>
+                          <Label htmlFor="bank" className="text-base font-semibold mb-2 block">Bank *</Label>
+                          <Input
+                            id="bank"
+                            required
+                            value={formData.bank}
+                            onChange={(e) => setFormData({...formData, bank: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter bank name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="branch" className="text-base font-semibold mb-2 block">Branch *</Label>
+                          <Input
+                            id="branch"
+                            required
+                            value={formData.branch}
+                            onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                            className="h-12 text-base"
+                            placeholder="Enter branch"
+                          />
+                        </div>
                         <div>
                           <Label htmlFor="check_number" className="text-base font-semibold mb-2 block">Check Number *</Label>
                           <Input
@@ -347,25 +391,23 @@ export default function Expenses() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="bank" className="text-base font-semibold mb-2 block">Bank *</Label>
+                          <Label htmlFor="invoice_number" className="text-base font-semibold mb-2 block">Invoice Number</Label>
                           <Input
-                            id="bank"
-                            required
-                            value={formData.bank}
-                            onChange={(e) => setFormData({...formData, bank: e.target.value})}
+                            id="invoice_number"
+                            value={formData.invoice_number}
+                            onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
                             className="h-12 text-base"
-                            placeholder="Enter bank name"
+                            placeholder="Enter invoice number"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="branch" className="text-base font-semibold mb-2 block">Branch *</Label>
+                          <Label htmlFor="expiry_date" className="text-base font-semibold mb-2 block">Expiry Date</Label>
                           <Input
-                            id="branch"
-                            required
-                            value={formData.branch}
-                            onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                            id="expiry_date"
+                            type="date"
+                            value={formData.expiry_date}
+                            onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
                             className="h-12 text-base"
-                            placeholder="Enter branch"
                           />
                         </div>
                       </>
