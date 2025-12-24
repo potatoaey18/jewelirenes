@@ -454,7 +454,17 @@ const Dashboard = () => {
     if (type === "sales" || type === "revenue") {
       const { data } = await supabase
         .from("transactions")
-        .select("total_amount, created_at, id")
+        .select(`
+          id,
+          total_amount,
+          created_at,
+          payment_type,
+          tax,
+          discount,
+          notes,
+          customers (name),
+          transaction_items (product_name, quantity, unit_price)
+        `)
         .gte("created_at", startDate.toISOString())
         .order("created_at", { ascending: true });
 
@@ -487,7 +497,17 @@ const Dashboard = () => {
     } else if (type === "expenses") {
       const { data } = await supabase
         .from("expenses")
-        .select("amount, expense_date, id")
+        .select(`
+          id,
+          amount,
+          expense_date,
+          category,
+          description,
+          vendor,
+          payment_method,
+          notes,
+          reference_number
+        `)
         .gte("expense_date", startDate.toISOString())
         .order("expense_date", { ascending: true });
 
