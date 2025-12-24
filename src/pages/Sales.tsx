@@ -265,18 +265,21 @@ const Sales = () => {
       <Navigation />
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
         <Tabs defaultValue="shop" className="space-y-4 sm:space-y-6">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
-            <TabsTrigger value="shop" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="shop" className="text-xs sm:text-sm gap-1">
               <Package className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Shop</span>
+              <span className="xs:hidden">Shop</span>
             </TabsTrigger>
-            <TabsTrigger value="sold" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+            <TabsTrigger value="sold" className="text-xs sm:text-sm gap-1">
               <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Sold</span> ({soldTransactions.length})
+              <span className="hidden xs:inline">Sold ({soldTransactions.length})</span>
+              <span className="xs:hidden">Sold</span>
             </TabsTrigger>
-            <TabsTrigger value="bin" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+            <TabsTrigger value="bin" className="text-xs sm:text-sm gap-1">
               <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Bin</span> ({deletedTransactions.length})
+              <span className="hidden xs:inline">Bin ({deletedTransactions.length})</span>
+              <span className="xs:hidden">Bin</span>
             </TabsTrigger>
           </TabsList>
 

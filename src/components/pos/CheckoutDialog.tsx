@@ -100,7 +100,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
   };
 
   const showPaymentDetailsFields = () => {
-    return ["Check", "Debit Card", "Bank Transfer", "GCash", "BDO", "BPI"].includes(paymentType);
+    return ["Credit Card", "Check", "Debit Card", "Bank Transfer", "GCash", "BDO", "BPI"].includes(paymentType);
   };
 
   // Calculate totals
@@ -521,7 +521,7 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                     </>
                   )}
 
-                  {paymentType === "Debit Card" && (
+                  {(paymentType === "Credit Card" || paymentType === "Debit Card") && (
                     <div className="space-y-2">
                       <Label htmlFor="reference_number">Transaction Reference Number</Label>
                       <Input

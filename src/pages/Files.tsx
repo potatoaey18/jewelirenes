@@ -32,6 +32,7 @@ const Files = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: "folder" | "file"; id: string; storagePath?: string } | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Fetch customers for client files tab
   const { data: customers = [] } = useQuery({
@@ -431,33 +432,112 @@ const Files = () => {
 
           {/* Clients Tab */}
           <TabsContent value="clients">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {customerFilesGrouped.map((customer) => (
-                <Card
-                  key={customer.id}
-                  className="cursor-pointer hover:shadow-lg transition-all"
-                  onClick={() => window.location.href = `/customers/${customer.id}`}
+            {selectedCustomerId ? (
+              <div className="space-y-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedCustomerId(null)}
+                  className="mb-4"
                 >
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="h-10 w-10 sm:h-16 sm:w-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-                        <Users className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
-                      </div>
-                      <p className="font-medium truncate w-full text-sm sm:text-base">{customer.name}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        {customer.files.length} file(s)
-                      </p>
+                  ← Back to Clients
+                </Button>
+                <h3 className="text-lg font-semibold">
+                  {customerFilesGrouped.find(c => c.id === selectedCustomerId)?.name}'s Files
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                  {customerFilesGrouped
+                    .find(c => c.id === selectedCustomerId)
+                    ?.files.map((cf: any) => (
+                      <Card key={cf.id} className="hover:shadow-lg transition-all group">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex flex-col items-center text-center">
+                            <File className="h-10 w-10 sm:h-16 sm:w-16 text-muted-foreground mb-2" />
+                            <p className="font-medium truncate w-full text-xs sm:text-sm">{cf.files?.name}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">
+                              {cf.files?.file_size ? `${(cf.files.file_size / 1024).toFixed(1)} KB` : ''}
+                            </p>
+                            {cf.description && (
+                              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {cf.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                if (cf.files?.storage_path) {
+                                  const { data } = supabase.storage.from("customer-files").getPublicUrl(cf.files.storage_path);
+                                  window.open(data.publicUrl, "_blank");
+                                }
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1"
+                              onClick={async () => {
+                                if (cf.files?.storage_path) {
+                                  const { data, error } = await supabase.storage.from("customer-files").download(cf.files.storage_path);
+                                  if (!error && data) {
+                                    const url = URL.createObjectURL(data);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = cf.files.name;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                  }
+                                }
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  {customerFilesGrouped.find(c => c.id === selectedCustomerId)?.files.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                      No files attached to this customer yet.
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {customers.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No clients yet. Add customers to see their file folders here.
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                {customerFilesGrouped.map((customer) => (
+                  <Card
+                    key={customer.id}
+                    className="cursor-pointer hover:shadow-lg transition-all"
+                    onClick={() => setSelectedCustomerId(customer.id)}
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="h-10 w-10 sm:h-16 sm:w-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                          <Users className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
+                        </div>
+                        <p className="font-medium truncate w-full text-sm sm:text-base">{customer.name}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
+                          {customer.files.length} file(s)
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {customers.length === 0 && (
+                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                    No clients yet. Add customers to see their file folders here.
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           {/* Vendors Tab */}
