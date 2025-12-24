@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { format, subDays, subWeeks, subMonths } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { format } from "date-fns";
 
 type TrendPeriod = "weekly" | "monthly" | "yearly";
 
@@ -71,7 +71,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
         
         <div className="mt-6 h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
+            <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis 
                 dataKey="date" 
@@ -83,23 +83,18 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                 className="text-xs"
               />
               <Tooltip content={<CustomTooltip />} />
-              <Line 
-                type="monotone" 
+              <Bar 
                 dataKey="value" 
-                stroke="hsl(var(--accent))" 
-                strokeWidth={2}
-                dot={{ fill: "hsl(var(--accent))", r: 4, cursor: "pointer" }}
-                activeDot={{ 
-                  r: 6, 
-                  onClick: (_e: any, payload: any) => {
-                    if (onDataPointClick && payload?.payload?.details) {
-                      onDataPointClick(payload.payload.details);
-                    }
-                  },
-                  cursor: "pointer"
+                fill="hsl(var(--accent))" 
+                radius={[4, 4, 0, 0]}
+                cursor="pointer"
+                onClick={(data: any) => {
+                  if (onDataPointClick && data?.details) {
+                    onDataPointClick(data.details);
+                  }
                 }}
               />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </DialogContent>
