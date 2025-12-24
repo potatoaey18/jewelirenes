@@ -188,7 +188,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
 
       {/* Item Detail Modal */}
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">
               {selectedItem?.isExpense ? "Expense Details" : "Transaction Details"}
@@ -251,6 +251,13 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                       </div>
                     )}
                     
+                    {selectedItem.reference_number && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-muted-foreground text-sm">Reference #</span>
+                        <span className="text-sm text-right font-mono">{selectedItem.reference_number}</span>
+                      </div>
+                    )}
+                    
                     {selectedItem.notes && (
                       <div className="pt-2">
                         <span className="text-muted-foreground text-sm block mb-1">Notes</span>
@@ -260,6 +267,14 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                   </>
                 ) : (
                   <>
+                    {/* Customer Name */}
+                    {selectedItem.customers?.name && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-muted-foreground text-sm">Customer</span>
+                        <span className="text-sm text-right font-medium">{selectedItem.customers.name}</span>
+                      </div>
+                    )}
+                    
                     {selectedItem.payment_type && (
                       <div className="flex justify-between items-start">
                         <span className="text-muted-foreground text-sm">Payment Type</span>
@@ -278,6 +293,28 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                       <div className="flex justify-between items-start">
                         <span className="text-muted-foreground text-sm">Discount</span>
                         <span className="text-sm text-green-600">-₱{Number(selectedItem.discount).toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {/* Transaction Items */}
+                    {selectedItem.transaction_items && selectedItem.transaction_items.length > 0 && (
+                      <div className="pt-2">
+                        <span className="text-muted-foreground text-sm block mb-2">Items Purchased</span>
+                        <div className="space-y-2">
+                          {selectedItem.transaction_items.map((item: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center bg-muted/30 p-2 rounded text-sm">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium truncate">{item.product_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.quantity} × ₱{Number(item.unit_price).toLocaleString()}
+                                </p>
+                              </div>
+                              <span className="font-medium ml-2">
+                                ₱{(item.quantity * item.unit_price).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     
