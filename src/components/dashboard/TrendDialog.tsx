@@ -149,14 +149,15 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                             <p className="font-medium text-sm truncate">
                               {isExpense 
                                 ? (item.category || item.description || "Expense")
-                                : `Transaction #${item.id?.slice(0, 8) || index + 1}`
+                                : (item.transaction_items?.map((ti: any) => ti.product_name).join(", ") || `Transaction #${item.id?.slice(0, 8) || index + 1}`)
                               }
                             </p>
                             <p className="text-xs text-muted-foreground">
+                              {!isExpense && item.customers?.name && <span className="font-medium">{item.customers.name} • </span>}
                               {format(new Date(item.created_at || item.expense_date), "h:mm a")} • Click for details
                             </p>
                           </div>
-                          <p className="font-bold text-accent text-sm">
+                          <p className="font-bold text-accent text-sm ml-2">
                             ₱{Number(item.total_amount || item.amount).toLocaleString()}
                           </p>
                         </CardContent>
