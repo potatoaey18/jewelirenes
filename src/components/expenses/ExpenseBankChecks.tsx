@@ -69,9 +69,9 @@ export function ExpenseBankChecks() {
     }
   });
 
-  // Fetch expenses to get unique vendors
-  const { data: expenses = [] } = useQuery({
-    queryKey: ['expenses'],
+  // Fetch expenses to get unique vendors - use different query key to avoid cache conflicts
+  const { data: expenseVendors = [] } = useQuery({
+    queryKey: ['expense_vendors'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expenses')
@@ -85,14 +85,14 @@ export function ExpenseBankChecks() {
   // Get unique vendors for suggestions
   const uniqueVendors = useMemo(() => {
     const vendors = new Set<string>();
-    expenses.forEach(exp => {
+    expenseVendors.forEach(exp => {
       if (exp.vendor) vendors.add(exp.vendor);
     });
     bankChecks.forEach(check => {
       if (check.vendor) vendors.add(check.vendor);
     });
     return Array.from(vendors).sort();
-  }, [expenses, bankChecks]);
+  }, [expenseVendors, bankChecks]);
 
   const createBankCheck = useMutation({
     mutationFn: async (data: any) => {
