@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Download, Pencil, Trash2, FileText, Banknote, Clock } from 'lucide-react';
+import { Plus, Search, Download, Pencil, Trash2, FileText, Banknote } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -226,8 +226,6 @@ export function ExpenseBankChecks() {
     });
 
   const totalAmount = bankChecks.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-  const encashedTotal = bankChecks.filter(c => c.status === 'Encashed').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-  const pendingTotal = bankChecks.filter(c => c.status !== 'Encashed').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -242,12 +240,11 @@ export function ExpenseBankChecks() {
       check.bank,
       check.check_number,
       new Date(check.check_date).toLocaleDateString(),
-      formatCurrencyForPDF(check.amount),
-      check.status
+      formatCurrencyForPDF(check.amount)
     ]);
     
     autoTable(doc, {
-      head: [["Vendor", "Bank", "Check Number", "Check Date", "Amount", "Status"]],
+      head: [["Vendor", "Bank", "Check Number", "Check Date", "Amount"]],
       body: tableData,
       startY: 35,
       styles: { fontSize: 8 },
@@ -259,8 +256,6 @@ export function ExpenseBankChecks() {
     doc.setFontSize(12);
     doc.text(`Total Checks: ${sortedChecks.length}`, 14, finalY + 10);
     doc.text(`Total Amount: ${formatCurrencyForPDF(totalAmount)}`, 14, finalY + 18);
-    doc.text(`Encashed: ${formatCurrencyForPDF(encashedTotal)}`, 14, finalY + 26);
-    doc.text(`Pending: ${formatCurrencyForPDF(pendingTotal)}`, 14, finalY + 34);
     
     doc.save(`expense-bank-checks-${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success("PDF exported successfully");
@@ -269,7 +264,7 @@ export function ExpenseBankChecks() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
@@ -278,33 +273,20 @@ export function ExpenseBankChecks() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Checks</p>
+                <p className="text-2xl font-bold">{bankChecks.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/10 rounded-lg">
+                <Banknote className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Amount</p>
                 <p className="text-2xl font-bold">₱{totalAmount.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <Banknote className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Encashed</p>
-                <p className="text-2xl font-bold text-green-600">₱{encashedTotal.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-orange-600">₱{pendingTotal.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -436,18 +418,6 @@ export function ExpenseBankChecks() {
                       onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="status">Status *</Label>
-                    <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Not Yet">Not Yet</SelectItem>
-                        <SelectItem value="Encashed">Encashed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
                 <Button type="submit" className="w-full">
                   {editingCheck ? 'Update Check' : 'Add Check'}
@@ -469,7 +439,6 @@ export function ExpenseBankChecks() {
                 <TableHead>Check Date</TableHead>
                 <TableHead>Date Received</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -482,11 +451,6 @@ export function ExpenseBankChecks() {
                   <TableCell>{new Date(check.check_date).toLocaleDateString()}</TableCell>
                   <TableCell>{new Date(check.date_received).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right font-semibold">₱{Number(check.amount).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={check.status === 'Encashed' ? 'default' : 'secondary'}>
-                      {check.status}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(check)}>
@@ -519,7 +483,7 @@ export function ExpenseBankChecks() {
               ))}
               {sortedChecks.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No expense bank checks found
                   </TableCell>
                 </TableRow>
