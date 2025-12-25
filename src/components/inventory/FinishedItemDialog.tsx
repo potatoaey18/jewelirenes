@@ -57,6 +57,8 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           stock: item.stock?.toString() || "0",
           image_url: item.image_url || ""
         });
+        fetchItemMaterials(item.id);
+        fetchItemLabor(item.id);
       } else {
         setFormData({
           sku: "",
@@ -72,6 +74,44 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       }
     }
   }, [open, item]);
+
+  const fetchItemMaterials = async (itemId: string) => {
+    const { data, error } = await supabase
+      .from("item_materials")
+      .select("*, raw_materials(*)")
+      .eq("item_id", itemId);
+    
+    if (!error && data) {
+      const mappedMaterials: Material[] = data.map((im: any) => ({
+        material_id: im.material_id,
+        quantity: im.quantity_used,
+        pieces: im.raw_materials?.type === "diamond" || im.raw_materials?.type === "gem" || im.raw_materials?.type === "south_sea_pearl" 
+          ? im.quantity_used : 1,
+        carat: im.raw_materials?.type === "diamond" || im.raw_materials?.type === "gem" ? im.quantity_used : 0,
+        size: im.raw_materials?.type === "south_sea_pearl" ? im.quantity_used : 0,
+        amountPerUnit: im.cost_at_time
+      }));
+      setMaterials(mappedMaterials);
+    }
+  };
+
+  const fetchItemLabor = async (itemId: string) => {
+    const { data, error } = await supabase
+      .from("item_labor")
+      .select("*")
+      .eq("item_id", itemId);
+    
+    if (!error && data) {
+      const mappedLabor: Labor[] = data.map((il: any) => ({
+        type: il.labor_type,
+        pieces: il.pieces,
+        amountPerPiece: il.amount_per_piece,
+        fixedCost: il.fixed_cost,
+        staffMember: il.staff_member
+      }));
+      setLabor(mappedLabor);
+    }
+  };
 
   const fetchRawMaterials = async () => {
     const { data, error } = await supabase
