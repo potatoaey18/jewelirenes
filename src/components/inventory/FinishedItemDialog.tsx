@@ -56,7 +56,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     description: "",
     date_manufactured: new Date().toISOString().split('T')[0],
     selling_price: "",
-    stock: "0",
+    stock: "1",
     image_url: "",
     customer_id: "",
     item_type: ""
@@ -64,6 +64,10 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   const [materials, setMaterials] = useState<Material[]>([]);
   const [labor, setLabor] = useState<Labor[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const handleNameChange = (value: string) => {
+    setFormData({ ...formData, name: value, sku: value });
+  };
 
   useEffect(() => {
     if (open) {
@@ -90,7 +94,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           description: "",
           date_manufactured: new Date().toISOString().split('T')[0],
           selling_price: "",
-          stock: "0",
+          stock: "1",
           image_url: "",
           customer_id: "",
           item_type: ""
@@ -438,7 +442,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
               <Label>Name</Label>
               <Input
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => handleNameChange(e.target.value)}
                 required
               />
             </div>
