@@ -2,13 +2,18 @@ import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileImage } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Download, FileImage, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrencyForPDF } from "@/lib/pdfUtils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TransactionDetailDialogProps {
   transaction: any;
@@ -18,16 +23,36 @@ interface TransactionDetailDialogProps {
 }
 
 export const TransactionDetailDialog = ({ transaction, customer, open, onOpenChange }: TransactionDetailDialogProps) => {
+  const { user } = useAuth();
   const [collections, setCollections] = useState<any[]>([]);
   const [paymentPlan, setPaymentPlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [addingPayment, setAddingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount_paid: "",
+    payment_date: new Date().toISOString().split('T')[0],
+    payment_method: "",
+    notes: ""
+  });
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open && transaction) {
       fetchTransactionDetails();
+      resetPaymentForm();
     }
   }, [open, transaction]);
+
+  const resetPaymentForm = () => {
+    setPaymentForm({
+      amount_paid: "",
+      payment_date: new Date().toISOString().split('T')[0],
+      payment_method: "",
+      notes: ""
+    });
+    setShowAddPayment(false);
+  };
 
   const fetchTransactionDetails = async () => {
     try {
@@ -56,6 +81,63 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentPlan || !user) return;
+
+    const amount = parseFloat(paymentForm.amount_paid);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    if (amount > paymentPlan.balance) {
+      toast.error(`Amount exceeds balance of ₱${paymentPlan.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+      return;
+    }
+
+    setAddingPayment(true);
+    try {
+      // Insert collection
+      const { error: collectionError } = await supabase
+        .from("collections")
+        .insert({
+          payment_plan_id: paymentPlan.id,
+          amount_paid: amount,
+          payment_date: paymentForm.payment_date,
+          payment_method: paymentForm.payment_method || null,
+          notes: paymentForm.notes || null,
+          created_by: user.id
+        });
+
+      if (collectionError) throw collectionError;
+
+      // Update payment plan
+      const newAmountPaid = paymentPlan.amount_paid + amount;
+      const newBalance = paymentPlan.balance - amount;
+      const newStatus = newBalance <= 0 ? "completed" : "active";
+
+      const { error: updateError } = await supabase
+        .from("payment_plans")
+        .update({
+          amount_paid: newAmountPaid,
+          balance: newBalance,
+          status: newStatus
+        })
+        .eq("id", paymentPlan.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Payment added successfully");
+      resetPaymentForm();
+      fetchTransactionDetails();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add payment");
+    } finally {
+      setAddingPayment(false);
     }
   };
 
@@ -268,21 +350,95 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
 
           {paymentPlan && (
             <div>
-              <h4 className="font-semibold mb-3">Payment Summary</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold">Payment Summary</h4>
+                {paymentPlan.balance > 0 && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setShowAddPayment(!showAddPayment)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Payment
+                  </Button>
+                )}
+              </div>
               <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-lg font-bold">Php {paymentPlan.total_amount}</p>
+                  <p className="text-lg font-bold">₱{paymentPlan.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Amount Paid</p>
-                  <p className="text-lg font-bold text-green-600">Php {totalPaid}</p>
+                  <p className="text-lg font-bold text-green-600">₱{totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Balance</p>
-                  <p className="text-lg font-bold text-red-600">Php {balance}</p>
+                  <p className="text-lg font-bold text-red-600">₱{balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
+
+              {showAddPayment && (
+                <form onSubmit={handleAddPayment} className="mt-4 p-4 border rounded-lg bg-muted/50 space-y-4">
+                  <h5 className="font-medium">Add Payment Collection</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Amount (₱)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder={`Max: ${paymentPlan.balance.toLocaleString()}`}
+                        value={paymentForm.amount_paid}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, amount_paid: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Payment Date</Label>
+                      <Input
+                        type="date"
+                        value={paymentForm.payment_date}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Payment Method</Label>
+                      <Select
+                        value={paymentForm.payment_method}
+                        onValueChange={(value) => setPaymentForm({ ...paymentForm, payment_method: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Cash">Cash</SelectItem>
+                          <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="GCash">GCash</SelectItem>
+                          <SelectItem value="Check">Check</SelectItem>
+                          <SelectItem value="Credit Card">Credit Card</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Notes (Optional)</Label>
+                      <Input
+                        placeholder="Payment notes..."
+                        value={paymentForm.notes}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={() => setShowAddPayment(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={addingPayment}>
+                      {addingPayment ? "Adding..." : "Add Payment"}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
 
@@ -297,7 +453,7 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
                         <p className="font-medium">{format(new Date(collection.payment_date), "PPP")}</p>
                         <p className="text-sm text-muted-foreground">{collection.payment_method || "N/A"}</p>
                       </div>
-                      <p className="text-lg font-bold text-green-600">Php {collection.amount_paid}</p>
+                      <p className="text-lg font-bold text-green-600">₱{Number(collection.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                     {collection.notes && (
                       <p className="text-sm text-muted-foreground">{collection.notes}</p>

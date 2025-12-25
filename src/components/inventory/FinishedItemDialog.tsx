@@ -467,14 +467,14 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
             <div>
               <Label>Customer (Optional - for custom orders)</Label>
               <Select
-                value={formData.customer_id}
-                onValueChange={(value) => setFormData({ ...formData, customer_id: value })}
+                value={formData.customer_id || "none"}
+                onValueChange={(value) => setFormData({ ...formData, customer_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer (if custom order)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No customer (general inventory)</SelectItem>
+                  <SelectItem value="none">No customer (general inventory)</SelectItem>
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name}

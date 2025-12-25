@@ -171,7 +171,7 @@ export default function Expenses() {
     expense.category?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+  const totalExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
 
   const isCheckPayment = formData.payment_method === CHECK_PAYMENT_METHOD;
   const isCardPayment = ['Credit Card', 'Debit Card'].includes(formData.payment_method);
@@ -495,7 +495,7 @@ export default function Expenses() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm sm:text-base text-muted-foreground mb-1 sm:mb-2">Total Expenses</p>
-              <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">₱{totalExpenses.toFixed(2)}</p>
+              <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">₱{(totalExpenses || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           </div>
         </Card>
