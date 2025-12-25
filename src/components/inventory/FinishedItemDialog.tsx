@@ -18,6 +18,7 @@ interface Material {
   carat?: number;
   size?: number;
   amountPerUnit: number;
+  costPerPiece?: number;
 }
 
 interface Labor {
@@ -28,9 +29,27 @@ interface Labor {
   staffMember?: string;
 }
 
+const ITEM_TYPES = [
+  "Ring",
+  "Pendant",
+  "Earring",
+  "Bracelet",
+  "Anklet",
+  "Necklace",
+  "Brooch",
+  "Cufflinks",
+  "Tiara",
+  "Watch",
+  "Charm",
+  "Chain",
+  "Bangle",
+  "Other"
+];
+
 export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     sku: "",
     name: "",
@@ -38,7 +57,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     date_manufactured: new Date().toISOString().split('T')[0],
     selling_price: "",
     stock: "0",
-    image_url: ""
+    image_url: "",
+    customer_id: "",
+    item_type: ""
   });
   const [materials, setMaterials] = useState<Material[]>([]);
   const [labor, setLabor] = useState<Labor[]>([]);
@@ -47,6 +68,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   useEffect(() => {
     if (open) {
       fetchRawMaterials();
+      fetchCustomers();
       if (item) {
         setFormData({
           sku: item.sku || "",
@@ -55,7 +77,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           date_manufactured: item.date_manufactured?.split('T')[0] || new Date().toISOString().split('T')[0],
           selling_price: item.selling_price?.toString() || "",
           stock: item.stock?.toString() || "0",
-          image_url: item.image_url || ""
+          image_url: item.image_url || "",
+          customer_id: item.customer_id || "",
+          item_type: item.item_type || ""
         });
         fetchItemMaterials(item.id);
         fetchItemLabor(item.id);
@@ -67,7 +91,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           date_manufactured: new Date().toISOString().split('T')[0],
           selling_price: "",
           stock: "0",
-          image_url: ""
+          image_url: "",
+          customer_id: "",
+          item_type: ""
         });
         setMaterials([]);
         setLabor([]);
@@ -82,15 +108,20 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       .eq("item_id", itemId);
     
     if (!error && data) {
-      const mappedMaterials: Material[] = data.map((im: any) => ({
-        material_id: im.material_id,
-        quantity: im.quantity_used,
-        pieces: im.raw_materials?.type === "diamond" || im.raw_materials?.type === "gem" || im.raw_materials?.type === "south_sea_pearl" 
-          ? im.quantity_used : 1,
-        carat: im.raw_materials?.type === "diamond" || im.raw_materials?.type === "gem" ? im.quantity_used : 0,
-        size: im.raw_materials?.type === "south_sea_pearl" ? im.quantity_used : 0,
-        amountPerUnit: im.cost_at_time
-      }));
+      const mappedMaterials: Material[] = data.map((im: any) => {
+        const materialType = im.raw_materials?.type;
+        const isPieceBased = materialType === "diamond" || materialType === "gem" || materialType === "south_sea_pearl";
+        
+        return {
+          material_id: im.material_id,
+          quantity: isPieceBased ? 0 : im.quantity_used,
+          pieces: isPieceBased ? im.quantity_used : 1,
+          carat: materialType === "diamond" || materialType === "gem" ? (im.raw_materials?.other_description ? parseFloat(im.raw_materials.other_description) : 0) : 0,
+          size: materialType === "south_sea_pearl" ? (im.raw_materials?.other_description ? parseFloat(im.raw_materials.other_description) : 0) : 0,
+          amountPerUnit: im.cost_at_time,
+          costPerPiece: (materialType === "gem" || materialType === "south_sea_pearl") ? (im.subtotal / (im.quantity_used || 1)) : 0
+        };
+      });
       setMaterials(mappedMaterials);
     }
   };
@@ -124,8 +155,19 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     }
   };
 
+  const fetchCustomers = async () => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, name")
+      .order("name");
+    
+    if (!error && data) {
+      setCustomers(data);
+    }
+  };
+
   const addMaterial = () => {
-    setMaterials([...materials, { material_id: "", quantity: 0, pieces: 1, carat: 0, size: 0, amountPerUnit: 0 }]);
+    setMaterials([...materials, { material_id: "", quantity: 0, pieces: 1, carat: 0, size: 0, amountPerUnit: 0, costPerPiece: 0 }]);
   };
 
   const removeMaterial = (index: number) => {
@@ -159,10 +201,11 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     if (material.type === "gold" || material.type === "silver") {
       return (mat.quantity || 0) * (mat.amountPerUnit || 0);
     } else if (material.type === "diamond") {
-      return (mat.carat || 0) * (mat.amountPerUnit || 0) * (mat.pieces || 1);
+      // Diamond: pieces × carat × amount per carat
+      return (mat.pieces || 1) * (mat.carat || 0) * (mat.amountPerUnit || 0);
     } else if (material.type === "gem" || material.type === "south_sea_pearl") {
-      const measurement = material.type === "gem" ? (mat.carat || 0) : (mat.size || 0);
-      return measurement * (mat.amountPerUnit || 0) * (mat.pieces || 1);
+      // Gem/Pearl: pieces × cost per piece
+      return (mat.pieces || 1) * (mat.costPerPiece || 0);
     } else if (material.type === "other") {
       return (mat.quantity || 0) * (mat.amountPerUnit || 0);
     }
@@ -210,11 +253,16 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       const totalCost = calculateTotalCost();
 
       const itemData = {
-        ...formData,
+        sku: formData.sku,
+        name: formData.name,
+        description: formData.description,
+        date_manufactured: formData.date_manufactured,
         selling_price: parseFloat(formData.selling_price),
         stock: parseInt(formData.stock),
         total_cost: totalCost,
-        image_url: imageUrl
+        image_url: imageUrl,
+        customer_id: formData.customer_id || null,
+        item_type: formData.item_type || null
       };
 
       let itemId = item?.id;
@@ -395,6 +443,43 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
               />
             </div>
             <div>
+              <Label>Item Type</Label>
+              <Select
+                value={formData.item_type}
+                onValueChange={(value) => setFormData({ ...formData, item_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select item type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ITEM_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Customer (Optional - for custom orders)</Label>
+              <Select
+                value={formData.customer_id}
+                onValueChange={(value) => setFormData({ ...formData, customer_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer (if custom order)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No customer (general inventory)</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Selling Price (₱)</Label>
               <Input
                 type="number"
@@ -537,7 +622,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             />
                           </div>
                           <div>
-                            <Label>{materialType === "gem" ? "Carat" : "Size"}</Label>
+                            <Label>{materialType === "gem" ? "Carat (per piece)" : "Size (per piece)"}</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -546,17 +631,17 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             />
                           </div>
                           <div>
-                            <Label>Amount per {materialType === "gem" ? "Carat" : "Size"} (₱)</Label>
+                            <Label>Cost per Piece (₱)</Label>
                             <Input
                               type="number"
                               step="0.01"
-                              value={mat.amountPerUnit}
-                              onChange={(e) => updateMaterial(index, "amountPerUnit", parseFloat(e.target.value))}
+                              value={mat.costPerPiece || 0}
+                              onChange={(e) => updateMaterial(index, "costPerPiece", parseFloat(e.target.value))}
                             />
                           </div>
                           <div>
-                            <Label>Total</Label>
-                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                            <Label>Total Cost</Label>
+                            <Input value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
                           </div>
                         </>
                       )}
