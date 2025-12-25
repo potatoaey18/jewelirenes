@@ -54,7 +54,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{format(new Date(dataPoint.date), period === "yearly" ? "MMM yyyy" : "MMM dd, yyyy")}</p>
-          <p className="text-accent font-bold">₱{dataPoint.value.toLocaleString()}</p>
+          <p className="text-accent font-bold">₱{dataPoint.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-xs text-muted-foreground mt-1">Click to view details</p>
         </div>
       );
@@ -158,7 +158,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                             </p>
                           </div>
                           <p className="font-bold text-accent text-sm ml-2">
-                            ₱{Number(item.total_amount || item.amount).toLocaleString()}
+                            ₱{Number(item.total_amount || item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </CardContent>
                       </Card>
@@ -168,7 +168,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
               </ScrollArea>
               <div className="mt-3 pt-3 border-t flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Total ({detailItems.length} items)</span>
-                <span className="font-bold text-accent">₱{selectedData?.value.toLocaleString()}</span>
+                <span className="font-bold text-accent">₱{selectedData?.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           )}
@@ -201,7 +201,7 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-sm">Amount</span>
                 <span className="font-bold text-xl text-accent">
-                  ₱{Number(selectedItem.total_amount || selectedItem.amount).toLocaleString()}
+                  ₱{Number(selectedItem.total_amount || selectedItem.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               
@@ -286,14 +286,14 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                     {selectedItem.tax !== undefined && selectedItem.tax > 0 && (
                       <div className="flex justify-between items-start">
                         <span className="text-muted-foreground text-sm">Tax</span>
-                        <span className="text-sm">₱{Number(selectedItem.tax).toLocaleString()}</span>
+                        <span className="text-sm">₱{Number(selectedItem.tax).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     
                     {selectedItem.discount !== undefined && selectedItem.discount > 0 && (
                       <div className="flex justify-between items-start">
                         <span className="text-muted-foreground text-sm">Discount</span>
-                        <span className="text-sm text-green-600">-₱{Number(selectedItem.discount).toLocaleString()}</span>
+                        <span className="text-sm text-green-600">-₱{Number(selectedItem.discount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     
@@ -307,11 +307,11 @@ export const TrendDialog = ({ open, onOpenChange, title, data, onDataPointClick,
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium truncate">{item.product_name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {item.quantity} × ₱{Number(item.unit_price).toLocaleString()}
+                                  {item.quantity} × ₱{Number(item.unit_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                               </div>
                               <span className="font-medium ml-2">
-                                ₱{(item.quantity * item.unit_price).toLocaleString()}
+                                ₱{(item.quantity * item.unit_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
                           ))}
