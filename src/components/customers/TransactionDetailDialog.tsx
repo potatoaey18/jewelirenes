@@ -294,14 +294,10 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
             </div>
           )}
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Date</p>
               <p className="font-medium">{format(new Date(transaction.created_at), "PPP")}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="text-2xl font-bold text-accent">Php {transaction.total_amount}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Type</p>
@@ -310,6 +306,29 @@ export const TransactionDetailDialog = ({ transaction, customer, open, onOpenCha
             <div>
               <p className="text-sm text-muted-foreground">Payment Type</p>
               <p className="font-medium">{transaction.payment_type || "N/A"}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 border rounded-lg bg-muted/30">
+            <div>
+              <p className="text-sm text-muted-foreground">Subtotal</p>
+              <p className="font-bold">₱{((transaction.total_amount || 0) + (transaction.discount || 0) - (transaction.tax || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </div>
+            {transaction.discount > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground">Discount</p>
+                <p className="font-bold text-green-600">-₱{Number(transaction.discount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+            )}
+            {transaction.tax > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground">Tax</p>
+                <p className="font-bold">+₱{Number(transaction.tax).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-muted-foreground">Total Amount</p>
+              <p className="text-xl font-bold text-accent">₱{Number(transaction.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           </div>
 
