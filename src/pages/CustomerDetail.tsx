@@ -436,16 +436,21 @@ const CustomerDetail = () => {
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <p className="font-medium">{format(new Date(transaction.created_at), "PPP")}</p>
+                            <p className="font-medium">
+                              {transaction.transaction_items && transaction.transaction_items.length > 0
+                                ? transaction.transaction_items.map((item: any) => item.product_name).join(", ")
+                                : "No items"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{format(new Date(transaction.created_at), "PPP")}</p>
                             <Badge className="mt-1">{transaction.transaction_type}</Badge>
                           </div>
-                          <p className="text-xl font-bold text-accent">₱{transaction.total_amount}</p>
+                          <p className="text-xl font-bold text-accent">₱{transaction.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         {transaction.transaction_items && transaction.transaction_items.length > 0 && (
                           <div className="mt-2 space-y-1 text-sm">
                             {transaction.transaction_items.map((item: any) => (
                               <p key={item.id} className="text-muted-foreground">
-                                {item.product_name} x {item.quantity} - ₱{item.subtotal}
+                                {item.quantity}x - ₱{item.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             ))}
                           </div>
