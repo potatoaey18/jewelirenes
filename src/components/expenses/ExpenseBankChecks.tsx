@@ -225,9 +225,9 @@ export function ExpenseBankChecks() {
       return new Date(b.date_received).getTime() - new Date(a.date_received).getTime();
     });
 
-  const totalAmount = bankChecks.reduce((sum, c) => sum + Number(c.amount), 0);
-  const encashedTotal = bankChecks.filter(c => c.status === 'Encashed').reduce((sum, c) => sum + Number(c.amount), 0);
-  const pendingTotal = bankChecks.filter(c => c.status !== 'Encashed').reduce((sum, c) => sum + Number(c.amount), 0);
+  const totalAmount = bankChecks.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const encashedTotal = bankChecks.filter(c => c.status === 'Encashed').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const pendingTotal = bankChecks.filter(c => c.status !== 'Encashed').reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
   const handleExportPDF = () => {
     const doc = new jsPDF();

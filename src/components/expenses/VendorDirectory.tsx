@@ -44,9 +44,10 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
     expenses.forEach((expense) => {
       const vendorName = expense.vendor || 'Unknown Vendor';
       const existing = vendorMap.get(vendorName);
+      const amount = Number(expense.amount) || 0;
 
       if (existing) {
-        existing.totalAmount += Number(expense.amount);
+        existing.totalAmount += amount;
         existing.transactionCount += 1;
         if (expense.category && !existing.categories.includes(expense.category)) {
           existing.categories.push(expense.category);
@@ -57,7 +58,7 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
       } else {
         vendorMap.set(vendorName, {
           name: vendorName,
-          totalAmount: Number(expense.amount),
+          totalAmount: amount,
           transactionCount: 1,
           categories: expense.category ? [expense.category] : [],
           lastPayment: expense.expense_date,
@@ -72,7 +73,7 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
     vendor.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalVendorSpend = vendors.reduce((sum, v) => sum + v.totalAmount, 0);
+  const totalVendorSpend = vendors.reduce((sum, v) => sum + (Number(v.totalAmount) || 0), 0);
 
   // Add new vendor (creates a placeholder expense with $0)
   const addVendor = useMutation({
