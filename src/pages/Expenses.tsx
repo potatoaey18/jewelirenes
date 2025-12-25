@@ -69,6 +69,19 @@ export default function Expenses() {
     }
   });
 
+  // Fetch expense bank checks (for total calculation - checks added directly in Checks tab)
+  const { data: expenseBankChecks = [] } = useQuery({
+    queryKey: ['expense_bank_checks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expense_bank_checks')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get unique vendors for suggestions
   const uniqueVendors = useMemo(() => {
     const vendors = new Set<string>();
@@ -171,7 +184,24 @@ export default function Expenses() {
     expense.category?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  // Calculate total: expenses + standalone checks (checks not already in expenses via Check payment method)
+  // Get check numbers from expenses that were paid via Check
+  const expenseCheckNumbers = useMemo(() => {
+    return new Set(
+      expenses
+        .filter(exp => exp.payment_method === 'Check' && exp.check_number)
+        .map(exp => exp.check_number)
+    );
+  }, [expenses]);
+
+  // Sum of standalone checks (not already counted in expenses)
+  const standaloneChecksTotal = useMemo(() => {
+    return expenseBankChecks
+      .filter(check => !expenseCheckNumbers.has(check.check_number))
+      .reduce((sum, check) => sum + (Number(check.amount) || 0), 0);
+  }, [expenseBankChecks, expenseCheckNumbers]);
+
+  const totalExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) + standaloneChecksTotal;
 
   const isCheckPayment = formData.payment_method === CHECK_PAYMENT_METHOD;
   const isCardPayment = ['Credit Card', 'Debit Card'].includes(formData.payment_method);
