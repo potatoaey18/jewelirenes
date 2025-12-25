@@ -392,11 +392,13 @@ export type Database = {
       finished_items: {
         Row: {
           created_at: string
+          customer_id: string | null
           date_manufactured: string
           deleted_at: string | null
           description: string | null
           id: string
           image_url: string | null
+          item_type: string | null
           name: string
           selling_price: number
           sku: string
@@ -406,11 +408,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           date_manufactured: string
           deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          item_type?: string | null
           name: string
           selling_price?: number
           sku: string
@@ -420,11 +424,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           date_manufactured?: string
           deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          item_type?: string | null
           name?: string
           selling_price?: number
           sku?: string
@@ -432,7 +438,15 @@ export type Database = {
           total_cost?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finished_items_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       folders: {
         Row: {
