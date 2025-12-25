@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createAuditLog } from "@/lib/auditLog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface Material {
   material_id: string;
@@ -50,6 +53,8 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   const [loading, setLoading] = useState(false);
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [itemTypeOpen, setItemTypeOpen] = useState(false);
+  const [customItemType, setCustomItemType] = useState("");
   const [formData, setFormData] = useState({
     sku: "",
     name: "",
@@ -100,6 +105,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       fetchRawMaterials();
       fetchCustomers();
       if (item) {
+        const existingItemType = item.item_type || "";
+        const isCustomType = existingItemType && !ITEM_TYPES.includes(existingItemType);
+        
         setFormData({
           sku: item.sku || "",
           name: item.name || "",
@@ -109,8 +117,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           stock: item.stock?.toString() || "0",
           image_url: item.image_url || "",
           customer_id: item.customer_id || "",
-          item_type: item.item_type || ""
+          item_type: isCustomType ? "Other" : existingItemType
         });
+        setCustomItemType(isCustomType ? existingItemType : "");
         fetchItemMaterials(item.id);
         fetchItemLabor(item.id);
       } else {
@@ -125,6 +134,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           customer_id: "",
           item_type: ""
         });
+        setCustomItemType("");
         setMaterials([]);
         setLabor([]);
       }
@@ -295,6 +305,8 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
       const totalCost = calculateTotalCost();
 
+      const finalItemType = formData.item_type === "Other" ? customItemType : formData.item_type;
+
       const itemData = {
         sku: formData.sku,
         name: formData.name,
@@ -305,7 +317,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
         total_cost: totalCost,
         image_url: imageUrl,
         customer_id: formData.customer_id || null,
-        item_type: formData.item_type || null
+        item_type: finalItemType || null
       };
 
       let itemId = item?.id;
@@ -485,23 +497,64 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Item Type</Label>
-              <Select
-                value={formData.item_type}
-                onValueChange={(value) => setFormData({ ...formData, item_type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select item type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ITEM_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={itemTypeOpen} onOpenChange={setItemTypeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={itemTypeOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {formData.item_type
+                      ? formData.item_type === "Other" && customItemType
+                        ? customItemType
+                        : formData.item_type
+                      : "Select item type..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 bg-popover" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search item type..." />
+                    <CommandList>
+                      <CommandEmpty>No item type found.</CommandEmpty>
+                      <CommandGroup>
+                        {ITEM_TYPES.map((type) => (
+                          <CommandItem
+                            key={type}
+                            value={type}
+                            onSelect={() => {
+                              setFormData({ ...formData, item_type: type });
+                              if (type !== "Other") {
+                                setCustomItemType("");
+                              }
+                              setItemTypeOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.item_type === type ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {type}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {formData.item_type === "Other" && (
+                <Input
+                  placeholder="Enter custom item type..."
+                  value={customItemType}
+                  onChange={(e) => setCustomItemType(e.target.value)}
+                  className="mt-2"
+                />
+              )}
             </div>
             <div>
               <Label>Customer (Optional - for custom orders)</Label>
