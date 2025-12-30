@@ -2,12 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatPeso } from '@/lib/currency';
+import { formatCurrencyForPDF } from '@/lib/pdfUtils';
 import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface PaymentPlanDetailDialogProps {
   open: boolean;
@@ -38,14 +42,72 @@ export function PaymentPlanDetailDialog({ open, onOpenChange, plan }: PaymentPla
     ? Math.min(100, (Number(plan.amount_paid) / Number(plan.total_amount)) * 100) 
     : 0;
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text("Payment Plan Details", 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy')}`, 14, 28);
+    
+    // Customer & Plan Info
+    doc.setFontSize(12);
+    doc.text(`Customer: ${plan.customers?.name || 'Unknown'}`, 14, 42);
+    doc.text(`Products: ${productNames}`, 14, 50);
+    doc.text(`Status: ${plan.status}`, 14, 58);
+    doc.text(`Created: ${format(new Date(plan.created_at), 'MMM dd, yyyy')}`, 14, 66);
+    
+    // Summary Box
+    doc.setFontSize(11);
+    doc.text(`Total Amount: ${formatCurrencyForPDF(plan.total_amount)}`, 14, 80);
+    doc.text(`Amount Paid: ${formatCurrencyForPDF(plan.amount_paid)}`, 14, 88);
+    doc.text(`Balance: ${formatCurrencyForPDF(plan.balance)}`, 14, 96);
+    doc.text(`Progress: ${progressPercent.toFixed(1)}%`, 14, 104);
+    
+    // Payment History Table
+    if (collections.length > 0) {
+      doc.setFontSize(12);
+      doc.text("Payment History", 14, 118);
+      
+      const tableData = collections.map((c: any) => [
+        format(new Date(c.payment_date), 'MMM dd, yyyy'),
+        formatCurrencyForPDF(c.amount_paid),
+        c.payment_method || '-',
+        c.notes || '-'
+      ]);
+      
+      autoTable(doc, {
+        head: [["Date", "Amount", "Method", "Notes"]],
+        body: tableData,
+        startY: 122,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [212, 175, 55] }
+      });
+    } else {
+      doc.text("No payments recorded yet.", 14, 118);
+    }
+    
+    const customerName = (plan.customers?.name || 'unknown').replace(/\s+/g, '-').toLowerCase();
+    doc.save(`payment-plan-${customerName}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Payment Plan Details</DialogTitle>
-          <DialogDescription>
-            View the breakdown of payments for this plan
-          </DialogDescription>
+          <div className="flex items-center justify-between pr-8">
+            <div>
+              <DialogTitle>Payment Plan Details</DialogTitle>
+              <DialogDescription>
+                View the breakdown of payments for this plan
+              </DialogDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExportPDF}>
+              <Download className="mr-2 h-4 w-4" />
+              Export PDF
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
