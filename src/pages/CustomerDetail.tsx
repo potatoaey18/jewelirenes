@@ -197,7 +197,7 @@ const CustomerDetail = () => {
     return <Badge className={variants[tier] || variants.Silver}>{tier}</Badge>;
   };
 
-  const handleBatchExportPDF = (filter: "all" | "paid" | "unpaid") => {
+  const handleBatchExportPDF = async (filter: "all" | "paid" | "unpaid") => {
     const doc = new jsPDF();
     
     let exportTransactions = displayTransactions;
@@ -215,6 +215,30 @@ const CustomerDetail = () => {
         return plan && plan.balance > 0;
       });
       title = "Unpaid Transactions";
+    }
+
+    // Fetch collections for layaway transactions
+    const layawayPlans = paymentPlans.filter(p => 
+      exportTransactions.some(t => t.id === p.transaction_id)
+    );
+    
+    let collectionsMap: Record<string, any[]> = {};
+    if (layawayPlans.length > 0) {
+      const planIds = layawayPlans.map(p => p.id);
+      const { data: collectionsData } = await supabase
+        .from("collections")
+        .select("*")
+        .in("payment_plan_id", planIds)
+        .order("payment_date", { ascending: true });
+      
+      if (collectionsData) {
+        collectionsData.forEach((col: any) => {
+          if (!collectionsMap[col.payment_plan_id]) {
+            collectionsMap[col.payment_plan_id] = [];
+          }
+          collectionsMap[col.payment_plan_id].push(col);
+        });
+      }
     }
     
     doc.setFontSize(18);
@@ -254,16 +278,92 @@ const CustomerDetail = () => {
         ];
       }),
       columnStyles: {
-        1: { cellWidth: 50 }, // Items column wider
+        1: { cellWidth: 50 },
       },
     });
     
-    const finalY = (doc as any).lastAutoTable?.finalY || yPos + 20;
-    doc.setFontSize(12);
-    doc.text(`Total Transactions: ${exportTransactions.length}`, 14, finalY + 10);
+    let currentY = (doc as any).lastAutoTable?.finalY || yPos + 20;
     
+    // Add summary
+    doc.setFontSize(12);
+    doc.text(`Total Transactions: ${exportTransactions.length}`, 14, currentY + 10);
     const total = exportTransactions.reduce((sum: number, t: any) => sum + Number(t.total_amount), 0);
-    doc.text(`Total Amount: ${formatCurrencyForPDF(total)}`, 14, finalY + 18);
+    doc.text(`Total Amount: ${formatCurrencyForPDF(total)}`, 14, currentY + 18);
+    currentY += 28;
+
+    // Add Payment Summary for Layaway Plans
+    const layawayTransactions = exportTransactions.filter(t => 
+      paymentPlans.some(p => p.transaction_id === t.id)
+    );
+    
+    if (layawayTransactions.length > 0) {
+      // Check if we need a new page
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text("Payment Summary - Layaway Plans", 14, currentY);
+      currentY += 8;
+      
+      for (const transaction of layawayTransactions) {
+        const plan = paymentPlans.find(p => p.transaction_id === transaction.id);
+        if (!plan) continue;
+        
+        const collections = collectionsMap[plan.id] || [];
+        const itemNames = transaction.transaction_items?.map((item: any) => 
+          item.product_name
+        ).join(", ") || "N/A";
+        
+        // Check if we need a new page
+        if (currentY > 240) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        // Transaction header
+        doc.setFontSize(11);
+        doc.setFont(undefined, "bold");
+        doc.text(`${itemNames}`, 14, currentY);
+        doc.setFont(undefined, "normal");
+        doc.setFontSize(9);
+        doc.text(`Date: ${format(new Date(transaction.created_at), "PP")}`, 14, currentY + 5);
+        currentY += 10;
+        
+        // Payment plan summary
+        const progressPercent = Number(plan.total_amount) > 0 
+          ? Math.min(100, (Number(plan.amount_paid) / Number(plan.total_amount)) * 100) 
+          : 0;
+        
+        doc.setFontSize(9);
+        doc.text(`Total: ${formatCurrencyForPDF(plan.total_amount)}  |  Paid: ${formatCurrencyForPDF(plan.amount_paid)}  |  Balance: ${formatCurrencyForPDF(plan.balance)}  |  Progress: ${progressPercent.toFixed(0)}%`, 14, currentY);
+        currentY += 6;
+        
+        // Collections table for this plan
+        if (collections.length > 0) {
+          autoTable(doc, {
+            startY: currentY,
+            head: [["Payment Date", "Amount Paid", "Method", "Notes"]],
+            body: collections.map((col: any) => [
+              format(new Date(col.payment_date), "PP"),
+              formatCurrencyForPDF(col.amount_paid),
+              col.payment_method || "-",
+              col.notes || "-"
+            ]),
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [212, 175, 55], fontSize: 8 },
+            margin: { left: 14, right: 14 },
+            tableWidth: 'auto',
+          });
+          currentY = (doc as any).lastAutoTable?.finalY + 8 || currentY + 20;
+        } else {
+          doc.setFontSize(8);
+          doc.text("No payments recorded yet", 14, currentY);
+          currentY += 10;
+        }
+      }
+    }
     
     doc.save(`${customer?.name || "customer"}-${filter}-transactions.pdf`);
     toast.success("PDF exported successfully");
