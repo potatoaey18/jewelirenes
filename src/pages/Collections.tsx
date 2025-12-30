@@ -142,18 +142,31 @@ export default function Collections() {
     mutationFn: async ({ planId, payment }: { planId: string; payment: any }) => {
       // Remove invoice_image from the payment data before inserting - handle separately if needed
       const { invoice_image, ...paymentData } = payment;
-      
+
+      // Avoid inserting empty strings into timestamp columns ("" -> null)
+      const cleanedPaymentData = {
+        ...paymentData,
+        payment_date:
+          typeof paymentData.payment_date === 'string' && paymentData.payment_date.trim() !== ''
+            ? paymentData.payment_date
+            : new Date().toISOString(),
+        due_date:
+          typeof paymentData.due_date === 'string' && paymentData.due_date.trim() !== ''
+            ? paymentData.due_date
+            : null,
+      };
+
       const { error: paymentError } = await supabase
         .from('collections')
-        .insert([{ ...paymentData, payment_plan_id: planId, created_by: user?.id }]);
-      
+        .insert([{ ...cleanedPaymentData, payment_plan_id: planId, created_by: user?.id }]);
+
       if (paymentError) throw paymentError;
 
-      const plan = paymentPlans.find(p => p.id === planId);
+      const plan = paymentPlans.find((p) => p.id === planId);
       if (!plan) throw new Error('Payment plan not found');
-      
+
       const oldPlanData = { amount_paid: plan.amount_paid, balance: plan.balance, status: plan.status };
-      const newAmountPaid = Number(plan.amount_paid) + Number(paymentData.amount_paid);
+      const newAmountPaid = Number(plan.amount_paid) + Number(cleanedPaymentData.amount_paid);
       const newBalance = Number(plan.total_amount) - newAmountPaid;
       const newStatus = newBalance <= 0 ? 'completed' : 'active';
 
@@ -162,13 +175,20 @@ export default function Collections() {
         .update({
           amount_paid: newAmountPaid,
           balance: newBalance,
-          status: newStatus
+          status: newStatus,
         })
         .eq('id', planId);
-      
+
       if (updateError) throw updateError;
-      await createAuditLog('CREATE', 'collections', undefined, undefined, { ...paymentData, customer: plan.customers?.name });
-      await createAuditLog('UPDATE', 'payment_plans', planId, oldPlanData, { amount_paid: newAmountPaid, balance: newBalance, status: newStatus });
+      await createAuditLog('CREATE', 'collections', undefined, undefined, {
+        ...cleanedPaymentData,
+        customer: plan.customers?.name,
+      });
+      await createAuditLog('UPDATE', 'payment_plans', planId, oldPlanData, {
+        amount_paid: newAmountPaid,
+        balance: newBalance,
+        status: newStatus,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment_plans'] });
@@ -180,7 +200,7 @@ export default function Collections() {
     onError: (error: any) => {
       console.error('Payment recording error:', error);
       toast.error(`Failed to record payment: ${error.message || 'Unknown error'}`);
-    }
+    },
   });
 
   const resetPlanForm = () => {
