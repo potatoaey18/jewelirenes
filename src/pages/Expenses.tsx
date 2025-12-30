@@ -18,6 +18,7 @@ import { VendorDirectory } from '@/components/expenses/VendorDirectory';
 import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
+import { CheckDetailDialog } from '@/components/expenses/CheckDetailDialog';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { CsvImport, CsvSampleDownload } from '@/components/CsvImport';
 import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
@@ -35,7 +36,9 @@ export default function Expenses() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [checkDetailDialogOpen, setCheckDetailDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [selectedCheck, setSelectedCheck] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => 
     (localStorage.getItem("expenses-view") as ViewMode) || "table"
@@ -210,7 +213,9 @@ export default function Expenses() {
         vendor: check.vendor,
         payment_method: 'Check',
         notes: check.notes,
-        isStandaloneCheck: true
+        isStandaloneCheck: true,
+        // Include original check data for detail view
+        originalCheck: check
       }));
   }, [expenseBankChecks, expenseCheckNumbers]);
 
@@ -593,7 +598,10 @@ export default function Expenses() {
                         key={expense.id} 
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => {
-                          if (!expense.isStandaloneCheck) {
+                          if (expense.isStandaloneCheck) {
+                            setSelectedCheck(expense.originalCheck);
+                            setCheckDetailDialogOpen(true);
+                          } else {
                             setSelectedExpense(expense);
                             setDetailDialogOpen(true);
                           }
@@ -632,7 +640,10 @@ export default function Expenses() {
                   ]}
                   data={allExpensesWithChecks}
                   onRowClick={(expense: any) => {
-                    if (!expense.isStandaloneCheck) {
+                    if (expense.isStandaloneCheck) {
+                      setSelectedCheck(expense.originalCheck);
+                      setCheckDetailDialogOpen(true);
+                    } else {
                       setSelectedExpense(expense);
                       setDetailDialogOpen(true);
                     }
@@ -656,6 +667,12 @@ export default function Expenses() {
           expense={selectedExpense}
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
+        />
+
+        <CheckDetailDialog
+          check={selectedCheck}
+          open={checkDetailDialogOpen}
+          onOpenChange={setCheckDetailDialogOpen}
         />
       </div>
     </div>
