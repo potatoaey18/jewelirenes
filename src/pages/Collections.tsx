@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { BankCheckDialog } from '@/components/collections/BankCheckDialog';
 import { BankCheckBookView } from '@/components/collections/BankCheckBookView';
 import { BankCheckDetailDialog } from '@/components/customers/BankCheckDetailDialog';
+import { PaymentPlanDetailDialog } from '@/components/collections/PaymentPlanDetailDialog';
 import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { format } from 'date-fns';
@@ -32,6 +33,7 @@ export default function Collections() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [planDetailOpen, setPlanDetailOpen] = useState(false);
   const [bankCheckDialogOpen, setBankCheckDialogOpen] = useState(false);
   const [bankCheckDetailOpen, setBankCheckDetailOpen] = useState(false);
   const [selectedBankCheck, setSelectedBankCheck] = useState<any>(null);
@@ -519,7 +521,14 @@ export default function Collections() {
                     filteredPlans.map((plan) => {
                       const productNames = plan.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
                       return (
-                        <Card key={plan.id} className="hover:bg-muted/50 transition-colors">
+                        <Card 
+                          key={plan.id} 
+                          className="hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedPlan(plan);
+                            setPlanDetailOpen(true);
+                          }}
+                        >
                           <CardContent className="p-3 space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="font-medium text-sm">{plan.customers?.name}</span>
@@ -536,7 +545,8 @@ export default function Collections() {
                               <Button
                                 size="sm"
                                 className="w-full h-7 text-xs"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedPlan(plan);
                                   setPaymentDialogOpen(true);
                                 }}
@@ -568,7 +578,14 @@ export default function Collections() {
                       {filteredPlans.map((plan) => {
                         const productNames = plan.transactions?.transaction_items?.map((item: any) => item.product_name).join(', ') || '-';
                         return (
-                          <TableRow key={plan.id}>
+                          <TableRow 
+                            key={plan.id} 
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => {
+                              setSelectedPlan(plan);
+                              setPlanDetailOpen(true);
+                            }}
+                          >
                             <TableCell className="font-medium">{plan.customers?.name}</TableCell>
                             <TableCell>{productNames}</TableCell>
                             <TableCell>{formatPeso(plan.total_amount)}</TableCell>
@@ -583,7 +600,8 @@ export default function Collections() {
                               {plan.status === 'active' && (
                                 <Button
                                   size="sm"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setSelectedPlan(plan);
                                     setPaymentDialogOpen(true);
                                   }}
@@ -711,6 +729,12 @@ export default function Collections() {
           open={bankCheckDetailOpen}
           onOpenChange={setBankCheckDetailOpen}
           check={selectedBankCheck}
+        />
+
+        <PaymentPlanDetailDialog
+          open={planDetailOpen}
+          onOpenChange={setPlanDetailOpen}
+          plan={selectedPlan}
         />
 
         <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
