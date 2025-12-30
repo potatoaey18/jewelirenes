@@ -23,6 +23,7 @@ import { CheckoutDialog } from "@/components/pos/CheckoutDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ViewToggle, ViewMode } from "@/components/ui/view-toggle";
+import { formatPeso } from "@/lib/currency";
 
 interface CartItem {
   id: string;
@@ -328,7 +329,7 @@ const Sales = () => {
                           {item.description || "No description"}
                         </p>
                         <p className="text-base md:text-lg font-bold text-accent">
-                          ₱{item.selling_price.toFixed(2)}
+                          {formatPeso(item.selling_price)}
                         </p>
                       </CardContent>
                     </Card>
@@ -352,7 +353,7 @@ const Sales = () => {
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-sm md:text-base truncate">{item.name}</p>
                                 <p className="text-xs md:text-sm text-muted-foreground">
-                                  ₱{item.price.toFixed(2)} each
+                                  {formatPeso(item.price)} each
                                 </p>
                               </div>
                               <div className="flex items-center gap-1 md:gap-2">
@@ -391,7 +392,7 @@ const Sales = () => {
                         <div className="space-y-2 pt-3 md:pt-4 border-t">
                           <div className="flex justify-between text-base md:text-lg font-bold">
                             <span>Total:</span>
-                            <span className="text-accent">₱{total.toFixed(2)}</span>
+                            <span className="text-accent">{formatPeso(total)}</span>
                           </div>
                         </div>
 
@@ -452,7 +453,7 @@ const Sales = () => {
                             )}
                           </div>
                           <div className="flex justify-between items-center pt-2 border-t">
-                            <span className="font-bold text-accent">₱{Number(transaction.total_amount).toLocaleString()}</span>
+                            <span className="font-bold text-accent">{formatPeso(transaction.total_amount)}</span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -499,7 +500,7 @@ const Sales = () => {
                             </div>
                           </TableCell>
                           <TableCell><Badge variant="outline">{transaction.payment_type || 'Cash'}</Badge></TableCell>
-                          <TableCell className="text-right font-semibold">₱{Number(transaction.total_amount).toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-semibold">{formatPeso(transaction.total_amount)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
@@ -571,7 +572,7 @@ const Sales = () => {
                             )}
                           </div>
                           <div className="flex justify-between items-center pt-2 border-t">
-                            <span className="font-bold">₱{Number(transaction.total_amount).toLocaleString()}</span>
+                            <span className="font-bold">{formatPeso(transaction.total_amount)}</span>
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
@@ -625,7 +626,7 @@ const Sales = () => {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-semibold">₱{Number(transaction.total_amount).toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-semibold">{formatPeso(transaction.total_amount)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button variant="ghost" size="sm" onClick={() => restoreMutation.mutate(transaction.id)} title="Restore">

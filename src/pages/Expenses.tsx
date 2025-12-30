@@ -21,9 +21,11 @@ import { ExpenseDetailDialog } from '@/components/expenses/ExpenseDetailDialog';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { CsvImport, CsvSampleDownload } from '@/components/CsvImport';
 import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
+import { formatPeso, parseCurrency } from '@/lib/currency';
 
 const ONLINE_PAYMENT_METHODS = ['GCash', 'BDO', 'BPI', 'Bank Transfer', 'Credit Card', 'Debit Card'];
 const CHECK_PAYMENT_METHOD = 'Check';
@@ -175,7 +177,8 @@ export default function Expenses() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createExpense.mutate(formData);
+    const numericAmount = parseCurrency(formData.amount);
+    createExpense.mutate({ ...formData, amount: numericAmount });
   };
 
   const filteredExpenses = expenses.filter(expense =>
@@ -326,14 +329,13 @@ export default function Expenses() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="amount" className="text-base font-semibold mb-2 block">Amount (₱)</Label>
-                      <Input
+                      <CurrencyInput
                         id="amount"
-                        type="number"
-                        step="0.01"
                         required
                         value={formData.amount}
-                        onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                        onChange={(display) => setFormData({...formData, amount: display})}
                         className="h-12 text-base"
+                        showPesoSign
                       />
                     </div>
                     <div>
@@ -525,7 +527,7 @@ export default function Expenses() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm sm:text-base text-muted-foreground mb-1 sm:mb-2">Total Expenses</p>
-              <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">₱{(totalExpenses || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">{formatPeso(totalExpenses || 0)}</p>
             </div>
           </div>
         </Card>
@@ -570,7 +572,7 @@ export default function Expenses() {
                         <CardContent className="p-3 space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-muted-foreground">{new Date(expense.expense_date).toLocaleDateString()}</span>
-                            <span className="font-bold text-sm text-accent">₱{Number(expense.amount).toLocaleString()}</span>
+                            <span className="font-bold text-sm text-accent">{formatPeso(expense.amount)}</span>
                           </div>
                           <p className="font-medium text-sm truncate">{expense.description || expense.category}</p>
                           <p className="text-xs text-muted-foreground truncate">{expense.vendor || '-'}</p>
@@ -595,7 +597,7 @@ export default function Expenses() {
                       key: 'amount',
                       label: 'Amount',
                       className: 'text-right font-semibold',
-                      render: (value: number) => `₱${Number(value).toLocaleString()}`
+                      render: (value: number) => formatPeso(value)
                     }
                   ]}
                   data={filteredExpenses}

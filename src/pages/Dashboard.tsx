@@ -11,6 +11,7 @@ import { DashboardSettings } from "@/components/dashboard/DashboardSettings";
 import { useNavigate } from "react-router-dom";
 import { format, startOfDay, startOfWeek, startOfMonth, subDays, subYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatPeso } from "@/lib/currency";
 
 type TrendPeriod = "weekly" | "monthly" | "yearly";
 type ViewMode = "cards" | "table";
@@ -559,7 +560,7 @@ const Dashboard = () => {
   const statsData = [
     {
       title: "Today's Sales",
-      value: `₱${stats.todaySales.toLocaleString()}`,
+      value: formatPeso(stats.todaySales),
       icon: DollarSign,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -583,7 +584,7 @@ const Dashboard = () => {
     },
     {
       title: "Revenue",
-      value: `₱${stats.totalRevenue.toLocaleString()}`,
+      value: formatPeso(stats.totalRevenue),
       icon: TrendingUp,
       trend: "",
       bgGradient: "from-accent/20 to-accent/5",
@@ -591,7 +592,7 @@ const Dashboard = () => {
     },
     {
       title: "Expenses",
-      value: `₱${stats.totalExpenses.toLocaleString()}`,
+      value: formatPeso(stats.totalExpenses),
       icon: Receipt,
       trend: "",
       bgGradient: "from-destructive/20 to-destructive/5",
@@ -695,7 +696,7 @@ const Dashboard = () => {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] sm:text-sm text-muted-foreground">Cash ({periodLabel})</p>
-                  <p className="text-sm sm:text-xl font-bold text-green-600 truncate">₱{cashOnlineStats.cashReceived.toLocaleString()}</p>
+                  <p className="text-sm sm:text-xl font-bold text-green-600 truncate">{formatPeso(cashOnlineStats.cashReceived)}</p>
                 </div>
               </div>
 
@@ -710,22 +711,22 @@ const Dashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] sm:text-sm text-muted-foreground">Online ({periodLabel})</p>
-                    <p className="text-sm sm:text-xl font-bold text-blue-600 truncate">₱{totalOnlinePayments.toLocaleString()}</p>
+                    <p className="text-sm sm:text-xl font-bold text-blue-600 truncate">{formatPeso(totalOnlinePayments)}</p>
                   </div>
                 </div>
                 {/* Sub-columns for GCash, BDO, BPI */}
                 <div className="grid grid-cols-3 gap-1 pt-2 border-t border-blue-500/20">
                   <div className="text-center">
                     <p className="text-[8px] sm:text-xs text-muted-foreground mb-0.5">GCash</p>
-                    <p className="text-[10px] sm:text-sm font-semibold text-blue-600 truncate">₱{cashOnlineStats.gcashReceived.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-sm font-semibold text-blue-600 truncate">{formatPeso(cashOnlineStats.gcashReceived)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-[8px] sm:text-xs text-muted-foreground mb-0.5">BDO</p>
-                    <p className="text-[10px] sm:text-sm font-semibold text-orange-600 truncate">₱{cashOnlineStats.bdoReceived.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-sm font-semibold text-orange-600 truncate">{formatPeso(cashOnlineStats.bdoReceived)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-[8px] sm:text-xs text-muted-foreground mb-0.5">BPI</p>
-                    <p className="text-[10px] sm:text-sm font-semibold text-purple-600 truncate">₱{cashOnlineStats.bpiReceived.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-sm font-semibold text-purple-600 truncate">{formatPeso(cashOnlineStats.bpiReceived)}</p>
                   </div>
                 </div>
               </div>
@@ -740,7 +741,7 @@ const Dashboard = () => {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] sm:text-sm text-muted-foreground">Checks ({periodLabel})</p>
-                  <p className="text-sm sm:text-xl font-bold text-amber-600 truncate">₱{cashOnlineStats.checkReceived.toLocaleString()}</p>
+                  <p className="text-sm sm:text-xl font-bold text-amber-600 truncate">{formatPeso(cashOnlineStats.checkReceived)}</p>
                 </div>
               </div>
             </div>
@@ -767,7 +768,7 @@ const Dashboard = () => {
                     >
                       <p className="font-medium text-xs sm:text-sm truncate flex-1">{productName}</p>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-accent text-xs sm:text-sm">₱{Number(sale.total_amount).toLocaleString()}</p>
+                        <p className="font-bold text-accent text-xs sm:text-sm">{formatPeso(sale.total_amount)}</p>
                         <p className="text-[10px] sm:text-xs text-muted-foreground">{timeAgo}</p>
                       </div>
                     </div>

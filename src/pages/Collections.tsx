@@ -20,10 +20,12 @@ import { BankCheckDialog } from '@/components/collections/BankCheckDialog';
 import { BankCheckBookView } from '@/components/collections/BankCheckBookView';
 import { BankCheckDetailDialog } from '@/components/customers/BankCheckDetailDialog';
 import { ViewToggle, ViewMode } from '@/components/ui/view-toggle';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
+import { formatPeso, parseCurrency } from '@/lib/currency';
 
 export default function Collections() {
   const { user } = useAuth();
@@ -205,7 +207,8 @@ export default function Collections() {
   const handlePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPlan) {
-      addPayment.mutate({ planId: selectedPlan.id, payment: paymentFormData });
+      const numericAmount = parseCurrency(paymentFormData.amount_paid);
+      addPayment.mutate({ planId: selectedPlan.id, payment: { ...paymentFormData, amount_paid: numericAmount } });
     }
   };
 
@@ -394,7 +397,7 @@ export default function Collections() {
                     <SelectContent>
                       {transactions.map((transaction) => (
                         <SelectItem key={transaction.id} value={transaction.id}>
-                          ₱{Number(transaction.total_amount).toFixed(2)} - {transaction.customers?.name}
+                          ₱{formatPeso(transaction.total_amount).slice(1)} - {transaction.customers?.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -497,8 +500,8 @@ export default function Collections() {
                             </div>
                             <p className="text-xs text-muted-foreground truncate">{productNames}</p>
                             <div className="flex justify-between text-xs">
-                              <span>Paid: ₱{Number(plan.amount_paid).toLocaleString()}</span>
-                              <span className="font-bold">Bal: ₱{Number(plan.balance).toLocaleString()}</span>
+                              <span>Paid: {formatPeso(plan.amount_paid)}</span>
+                              <span className="font-bold">Bal: {formatPeso(plan.balance)}</span>
                             </div>
                             {plan.status === 'active' && (
                               <Button
@@ -539,9 +542,9 @@ export default function Collections() {
                           <TableRow key={plan.id}>
                             <TableCell className="font-medium">{plan.customers?.name}</TableCell>
                             <TableCell>{productNames}</TableCell>
-                            <TableCell>₱{Number(plan.total_amount).toFixed(2)}</TableCell>
-                            <TableCell>₱{Number(plan.amount_paid).toFixed(2)}</TableCell>
-                            <TableCell>₱{Number(plan.balance).toFixed(2)}</TableCell>
+                            <TableCell>{formatPeso(plan.total_amount)}</TableCell>
+                            <TableCell>{formatPeso(plan.amount_paid)}</TableCell>
+                            <TableCell>{formatPeso(plan.balance)}</TableCell>
                             <TableCell>
                               <Badge variant={plan.status === 'completed' ? 'default' : 'secondary'}>
                                 {plan.status}
@@ -598,7 +601,7 @@ export default function Collections() {
                           <CardContent className="p-3 space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-muted-foreground">{new Date(collection.payment_date).toLocaleDateString()}</span>
-                              <span className="font-bold text-sm text-accent">₱{Number(collection.amount_paid).toLocaleString()}</span>
+                              <span className="font-bold text-sm text-accent">{formatPeso(collection.amount_paid)}</span>
                             </div>
                             <p className="font-medium text-sm">{collection.payment_plans?.customers?.name || 'Unknown'}</p>
                             <p className="text-xs text-muted-foreground truncate">{productNames}</p>
@@ -629,7 +632,7 @@ export default function Collections() {
                           <TableCell>{new Date(collection.payment_date).toLocaleDateString()}</TableCell>
                           <TableCell>{collection.payment_plans?.customers?.name}</TableCell>
                           <TableCell>{productNames}</TableCell>
-                          <TableCell className="font-medium">₱{Number(collection.amount_paid).toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">{formatPeso(collection.amount_paid)}</TableCell>
                           <TableCell>{collection.payment_method}</TableCell>
                           <TableCell>{collection.notes}</TableCell>
                         </TableRow>
@@ -693,17 +696,16 @@ export default function Collections() {
               </div>
               <div>
                 <Label>Remaining Balance</Label>
-                <Input value={`₱${Number(selectedPlan?.balance || 0).toFixed(2)}`} disabled />
+                <Input value={formatPeso(selectedPlan?.balance || 0)} disabled />
               </div>
               <div>
                 <Label htmlFor="amount_paid">Payment Amount (₱)</Label>
-                <Input
+                <CurrencyInput
                   id="amount_paid"
-                  type="number"
-                  step="0.01"
                   required
                   value={paymentFormData.amount_paid}
-                  onChange={(e) => setPaymentFormData({...paymentFormData, amount_paid: e.target.value})}
+                  onChange={(display) => setPaymentFormData({...paymentFormData, amount_paid: display})}
+                  showPesoSign
                 />
               </div>
               <div>

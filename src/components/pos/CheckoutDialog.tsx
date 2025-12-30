@@ -13,6 +13,8 @@ import { Upload, Eye, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createAuditLog } from "@/lib/auditLog";
 import { Card, CardContent } from "@/components/ui/card";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { formatPeso, parseCurrency } from "@/lib/currency";
 
 interface CartItem {
   id: string;
@@ -448,15 +450,15 @@ export const CheckoutDialog = ({ open, onOpenChange, cart, total, onSuccess }: C
                     <div className="text-sm space-y-1 pt-2 border-t border-accent/20">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Amount:</span>
-                        <span className="font-medium">₱{totalAmount.toLocaleString()}</span>
+                        <span className="font-medium">{formatPeso(totalAmount)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Down Payment:</span>
-                        <span className="font-medium text-green-600">₱{downPaymentAmount.toLocaleString()}</span>
+                        <span className="font-medium text-green-600">{formatPeso(downPaymentAmount)}</span>
                       </div>
                       <div className="flex justify-between text-base font-semibold">
                         <span>Remaining Balance:</span>
-                        <span className="text-orange-600">₱{balance.toLocaleString()}</span>
+                        <span className="text-orange-600">{formatPeso(balance)}</span>
                       </div>
                     </div>
                   )}
