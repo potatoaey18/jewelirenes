@@ -667,7 +667,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           </div>
                           <div>
                             <Label>Total</Label>
-                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                            <Input value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
                           </div>
                         </>
                       )}
@@ -831,7 +831,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                           </div>
                           <div>
                             <Label>Total</Label>
-                            <Input value={`₱${calculateMaterialCost(mat).toFixed(2)}`} disabled />
+                            <Input value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
                           </div>
                         </>
                       )}
@@ -917,7 +917,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
                     <div>
                       <Label>Total</Label>
-                      <Input value={`₱${calculateLaborCost(lab).toFixed(2)}`} disabled />
+                      <Input value={`₱${calculateLaborCost(lab).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
                     </div>
                   </div>
                   <Button type="button" size="sm" variant="ghost" onClick={() => removeLabor(index)}>
@@ -931,16 +931,16 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           <div className="border-t pt-4">
             <div className="flex justify-between text-lg font-bold">
               <span>Total Cost:</span>
-              <span>₱{calculateTotalCost().toFixed(2)}</span>
+              <span>₱{calculateTotalCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : item ? "Update" : "Create"}
+              {loading ? "Processing..." : item ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </form>

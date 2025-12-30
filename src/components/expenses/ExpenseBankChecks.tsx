@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Download, Pencil, Trash2, FileText, Banknote } from 'lucide-react';
+import { Plus, Search, Download, Pencil, Trash2, FileText, Banknote, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +18,8 @@ import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { formatPeso, parseCurrency } from '@/lib/currency';
 
 interface ExpenseBankCheck {
   id: string;
@@ -196,12 +198,16 @@ export function ExpenseBankChecks() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const numericAmount = parseCurrency(formData.amount);
+    const submitData = { ...formData, amount: numericAmount };
     if (editingCheck) {
-      updateBankCheck.mutate({ id: editingCheck.id, data: formData });
+      updateBankCheck.mutate({ id: editingCheck.id, data: submitData });
     } else {
-      createBankCheck.mutate(formData);
+      createBankCheck.mutate(submitData);
     }
   };
+  
+  const isProcessing = createBankCheck.isPending || updateBankCheck.isPending;
 
   const handleDialogClose = (open: boolean) => {
     setDialogOpen(open);
@@ -286,7 +292,7 @@ export function ExpenseBankChecks() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-2xl font-bold">₱{totalAmount.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatPeso(totalAmount)}</p>
               </div>
             </div>
           </CardContent>
@@ -382,13 +388,12 @@ export function ExpenseBankChecks() {
                   </div>
                   <div>
                     <Label htmlFor="amount">Amount (₱) *</Label>
-                    <Input
+                    <CurrencyInput
                       id="amount"
-                      type="number"
-                      step="0.01"
                       required
                       value={formData.amount}
-                      onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                      onChange={(display) => setFormData({...formData, amount: display})}
+                      showPesoSign
                     />
                   </div>
                   <div>
@@ -419,8 +424,8 @@ export function ExpenseBankChecks() {
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full">
-                  {editingCheck ? 'Update Check' : 'Add Check'}
+                <Button type="submit" className="w-full" disabled={isProcessing}>
+                  {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : editingCheck ? 'Update Check' : 'Add Check'}
                 </Button>
               </form>
             </DialogContent>
@@ -450,7 +455,7 @@ export function ExpenseBankChecks() {
                   <TableCell>{check.check_number}</TableCell>
                   <TableCell>{new Date(check.check_date).toLocaleDateString()}</TableCell>
                   <TableCell>{new Date(check.date_received).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right font-semibold">₱{Number(check.amount).toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatPeso(check.amount)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(check)}>
