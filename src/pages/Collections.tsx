@@ -140,15 +140,20 @@ export default function Collections() {
 
   const addPayment = useMutation({
     mutationFn: async ({ planId, payment }: { planId: string; payment: any }) => {
+      // Remove invoice_image from the payment data before inserting - handle separately if needed
+      const { invoice_image, ...paymentData } = payment;
+      
       const { error: paymentError } = await supabase
         .from('collections')
-        .insert([{ ...payment, payment_plan_id: planId, created_by: user?.id }]);
+        .insert([{ ...paymentData, payment_plan_id: planId, created_by: user?.id }]);
       
       if (paymentError) throw paymentError;
 
       const plan = paymentPlans.find(p => p.id === planId);
+      if (!plan) throw new Error('Payment plan not found');
+      
       const oldPlanData = { amount_paid: plan.amount_paid, balance: plan.balance, status: plan.status };
-      const newAmountPaid = Number(plan.amount_paid) + Number(payment.amount_paid);
+      const newAmountPaid = Number(plan.amount_paid) + Number(paymentData.amount_paid);
       const newBalance = Number(plan.total_amount) - newAmountPaid;
       const newStatus = newBalance <= 0 ? 'completed' : 'active';
 
@@ -162,7 +167,7 @@ export default function Collections() {
         .eq('id', planId);
       
       if (updateError) throw updateError;
-      await createAuditLog('CREATE', 'collections', undefined, undefined, { ...payment, customer: plan.customers?.name });
+      await createAuditLog('CREATE', 'collections', undefined, undefined, { ...paymentData, customer: plan.customers?.name });
       await createAuditLog('UPDATE', 'payment_plans', planId, oldPlanData, { amount_paid: newAmountPaid, balance: newBalance, status: newStatus });
     },
     onSuccess: () => {
@@ -171,6 +176,10 @@ export default function Collections() {
       toast.success('Payment recorded successfully');
       setPaymentDialogOpen(false);
       resetPaymentForm();
+    },
+    onError: (error: any) => {
+      console.error('Payment recording error:', error);
+      toast.error(`Failed to record payment: ${error.message || 'Unknown error'}`);
     }
   });
 
