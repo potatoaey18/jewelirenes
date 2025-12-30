@@ -19,6 +19,7 @@ import { formatCurrencyForPDF } from "@/lib/pdfUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatPeso } from "@/lib/currency";
 
 type TimePeriod = "weekly" | "monthly" | "yearly";
 type PurchaseFilter = "all" | "paid" | "unpaid";
@@ -365,7 +366,7 @@ const CustomerDetail = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Spent</p>
-                    <p className="text-3xl font-bold text-accent">₱{totalSpent.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-accent">{formatPeso(totalSpent)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Purchases</p>
@@ -373,11 +374,11 @@ const CustomerDetail = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Paid</p>
-                    <p className="text-2xl font-bold text-green-600">₱{paidAmount.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-600">{formatPeso(paidAmount)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Unpaid</p>
-                    <p className="text-2xl font-bold text-red-600">₱{unpaidBalance.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-red-600">{formatPeso(unpaidBalance)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -444,7 +445,7 @@ const CustomerDetail = () => {
                             <p className="text-sm text-muted-foreground">{format(new Date(transaction.created_at), "PPP")}</p>
                             <Badge className="mt-1">{transaction.transaction_type}</Badge>
                           </div>
-                          <p className="text-xl font-bold text-accent">₱{transaction.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="text-xl font-bold text-accent">{formatPeso(transaction.total_amount)}</p>
                         </div>
                         {transaction.transaction_items && transaction.transaction_items.length > 0 && (
                           <div className="mt-2 space-y-1 text-sm">

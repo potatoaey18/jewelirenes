@@ -9,6 +9,7 @@ import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatPeso } from "@/lib/currency";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrencyForPDF } from "@/lib/pdfUtils";
@@ -166,7 +167,7 @@ const VendorDetail = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Expenses</p>
-                  <p className="text-2xl font-bold">₱{totalExpenses.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">{formatPeso(totalExpenses)}</p>
                 </div>
               </div>
             </CardContent>
@@ -179,7 +180,7 @@ const VendorDetail = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Bank Checks</p>
-                  <p className="text-2xl font-bold">₱{totalChecks.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">{formatPeso(totalChecks)}</p>
                 </div>
               </div>
             </CardContent>
@@ -247,7 +248,7 @@ const VendorDetail = () => {
                           <Badge variant="outline" className="mt-1">{expense.category}</Badge>
                         </div>
                         <p className="text-lg font-bold text-accent">
-                          ₱{Number(expense.amount).toLocaleString()}
+                          {formatPeso(expense.amount)}
                         </p>
                       </div>
                       {expense.description && (
@@ -291,7 +292,7 @@ const VendorDetail = () => {
                           {expense.notes || "-"}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          ₱{Number(expense.amount).toLocaleString()}
+                          {formatPeso(expense.amount)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -338,7 +339,7 @@ const VendorDetail = () => {
                             Received: {format(new Date(check.date_received), "PP")}
                           </span>
                           <span className="text-lg font-bold text-accent">
-                            ₱{Number(check.amount).toLocaleString()}
+                            {formatPeso(check.amount)}
                           </span>
                         </div>
                       </CardContent>
@@ -377,7 +378,7 @@ const VendorDetail = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-semibold">
-                            ₱{Number(check.amount).toLocaleString()}
+                            {formatPeso(check.amount)}
                           </TableCell>
                         </TableRow>
                       ))}
