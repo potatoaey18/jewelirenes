@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createAuditLog } from "@/lib/auditLog";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { parseCurrency, formatCurrency } from "@/lib/currency";
 
 export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,7 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
           name: material.name || "",
           type: material.type || "gold",
           quantity_on_hand: material.quantity_on_hand?.toString() || "",
-          cost_per_unit: material.cost_per_unit?.toString() || "",
+          cost_per_unit: material.cost_per_unit ? formatCurrency(material.cost_per_unit) : "",
           unit: material.unit || "grams",
           other_description: material.other_description || ""
         });
@@ -59,7 +61,7 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
         type: formData.type as "gold" | "diamond" | "gem" | "south_sea_pearl" | "other",
         unit: formData.unit,
         quantity_on_hand: parseFloat(formData.quantity_on_hand),
-        cost_per_unit: parseFloat(formData.cost_per_unit),
+        cost_per_unit: parseCurrency(formData.cost_per_unit),
         other_description: formData.type === "other" ? formData.other_description : null
       };
 
@@ -172,21 +174,20 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
 
           <div>
             <Label>Cost per Unit (₱)</Label>
-            <Input
-              type="number"
-              step="0.01"
+            <CurrencyInput
               value={formData.cost_per_unit}
-              onChange={(e) => setFormData({ ...formData, cost_per_unit: e.target.value })}
+              onChange={(display) => setFormData({ ...formData, cost_per_unit: display })}
+              showPesoSign
               required
             />
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : material ? "Update" : "Create"}
+              {loading ? "Processing..." : material ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </form>

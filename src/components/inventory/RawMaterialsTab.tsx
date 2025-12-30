@@ -131,7 +131,7 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
                 </div>
                 <div>
                   <p className="text-muted-foreground">Cost per Unit</p>
-                  <p className="font-semibold">₱{Number(material.cost_per_unit).toLocaleString()}</p>
+                  <p className="font-semibold">₱{Number(material.cost_per_unit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
               <div className="flex gap-2">

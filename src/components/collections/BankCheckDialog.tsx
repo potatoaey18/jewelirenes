@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { parseCurrency, formatCurrency } from '@/lib/currency';
 
 interface BankCheckDialogProps {
   open: boolean;
@@ -21,7 +23,7 @@ export function BankCheckDialog({ open, onOpenChange, customers, onSubmit, initi
     check_date: initialData?.check_date?.split('T')[0] || '',
     check_number: initialData?.check_number || '',
     invoice_number: initialData?.invoice_number || '',
-    amount: initialData?.amount || '',
+    amount: initialData?.amount ? formatCurrency(initialData.amount) : '',
     date_received: initialData?.date_received?.split('T')[0] || new Date().toISOString().split('T')[0],
     expiry_date: initialData?.expiry_date?.split('T')[0] || '',
     status: initialData?.status || 'Not Yet'
@@ -29,7 +31,8 @@ export function BankCheckDialog({ open, onOpenChange, customers, onSubmit, initi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const numericAmount = parseCurrency(formData.amount);
+    onSubmit({ ...formData, amount: numericAmount });
     onOpenChange(false);
   };
 
@@ -113,12 +116,11 @@ export function BankCheckDialog({ open, onOpenChange, customers, onSubmit, initi
 
             <div>
               <Label htmlFor="amount">Amount (₱) *</Label>
-              <Input
+              <CurrencyInput
                 id="amount"
-                type="number"
-                step="0.01"
                 value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                onChange={(display) => setFormData({...formData, amount: display})}
+                showPesoSign
                 required
               />
             </div>

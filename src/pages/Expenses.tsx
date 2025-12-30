@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Download } from 'lucide-react';
+import { Plus, Search, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -197,12 +197,38 @@ export default function Expenses() {
     );
   }, [expenses]);
 
-  // Sum of standalone checks (not already counted in expenses)
-  const standaloneChecksTotal = useMemo(() => {
+  // Get standalone checks (not already counted in expenses)
+  const standaloneChecks = useMemo(() => {
     return expenseBankChecks
       .filter(check => !expenseCheckNumbers.has(check.check_number))
-      .reduce((sum, check) => sum + (Number(check.amount) || 0), 0);
+      .map(check => ({
+        id: check.id,
+        amount: check.amount,
+        expense_date: check.date_received,
+        category: 'Check Payment',
+        description: `Check #${check.check_number} - ${check.bank}`,
+        vendor: check.vendor,
+        payment_method: 'Check',
+        notes: check.notes,
+        isStandaloneCheck: true
+      }));
   }, [expenseBankChecks, expenseCheckNumbers]);
+
+  // Combined and filtered expenses (including standalone checks)
+  const filteredStandaloneChecks = standaloneChecks.filter(check =>
+    check.description?.toLowerCase().includes(search.toLowerCase()) ||
+    check.vendor?.toLowerCase().includes(search.toLowerCase()) ||
+    check.category?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Merge expenses and standalone checks for display
+  const allExpensesWithChecks = useMemo(() => {
+    return [...filteredExpenses, ...filteredStandaloneChecks].sort((a, b) => 
+      new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
+    );
+  }, [filteredExpenses, filteredStandaloneChecks]);
+
+  const standaloneChecksTotal = standaloneChecks.reduce((sum, check) => sum + (Number(check.amount) || 0), 0);
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) + standaloneChecksTotal;
 
@@ -220,7 +246,7 @@ export default function Expenses() {
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
     doc.text(`Total Expenses: ${formatCurrencyForPDF(totalExpenses)}`, 14, 38);
     
-    const tableData = filteredExpenses.map((expense) => [
+    const tableData = allExpensesWithChecks.map((expense: any) => [
       new Date(expense.expense_date).toLocaleDateString(),
       expense.description || '-',
       expense.category || '-',
@@ -516,7 +542,9 @@ export default function Expenses() {
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full text-lg">Add Expense</Button>
+                  <Button type="submit" className="w-full text-lg" disabled={createExpense.isPending}>
+                    {createExpense.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : 'Add Expense'}
+                  </Button>
                 </form>
               </DialogContent>
             </Dialog>
@@ -557,16 +585,18 @@ export default function Expenses() {
 
               {viewMode === "cards" ? (
                 <div className="space-y-2">
-                  {filteredExpenses.length === 0 ? (
+                  {allExpensesWithChecks.length === 0 ? (
                     <p className="text-center py-8 text-muted-foreground text-sm">No expenses found</p>
                   ) : (
-                    filteredExpenses.map((expense) => (
+                    allExpensesWithChecks.map((expense: any) => (
                       <Card 
                         key={expense.id} 
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => {
-                          setSelectedExpense(expense);
-                          setDetailDialogOpen(true);
+                          if (!expense.isStandaloneCheck) {
+                            setSelectedExpense(expense);
+                            setDetailDialogOpen(true);
+                          }
                         }}
                       >
                         <CardContent className="p-3 space-y-1">
@@ -600,10 +630,12 @@ export default function Expenses() {
                       render: (value: number) => formatPeso(value)
                     }
                   ]}
-                  data={filteredExpenses}
-                  onRowClick={(expense) => {
-                    setSelectedExpense(expense);
-                    setDetailDialogOpen(true);
+                  data={allExpensesWithChecks}
+                  onRowClick={(expense: any) => {
+                    if (!expense.isStandaloneCheck) {
+                      setSelectedExpense(expense);
+                      setDetailDialogOpen(true);
+                    }
                   }}
                   emptyMessage="No expenses found"
                 />

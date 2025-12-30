@@ -122,13 +122,13 @@ export function ItemDetailsDialog({ open, onOpenChange, item }: any) {
                       <TableCell>{mat.raw_materials?.name}</TableCell>
                       <TableCell>{getMaterialTypeLabel(mat.raw_materials?.type)}</TableCell>
                       <TableCell>{formatQuantity(mat.quantity_used, mat.raw_materials?.type)}</TableCell>
-                      <TableCell>₱{Number(mat.cost_at_time).toFixed(2)}</TableCell>
-                      <TableCell className="text-right">₱{Number(mat.subtotal).toFixed(2)}</TableCell>
+                      <TableCell>₱{Number(mat.cost_at_time).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right">₱{Number(mat.subtotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="font-semibold">
                     <TableCell colSpan={4}>Total Materials Cost</TableCell>
-                    <TableCell className="text-right">₱{totalMaterialCost.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₱{totalMaterialCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -150,15 +150,15 @@ export function ItemDetailsDialog({ open, onOpenChange, item }: any) {
                       <TableCell>{getLaborTypeLabel(lab.labor_type)}</TableCell>
                       <TableCell>
                         {lab.labor_type === "diamond_setting" 
-                          ? `${lab.pieces} pieces × ₱${Number(lab.amount_per_piece).toFixed(2)}`
+                          ? `${lab.pieces} pieces × ₱${Number(lab.amount_per_piece).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           : "Fixed cost"}
                       </TableCell>
-                      <TableCell className="text-right">₱{Number(lab.total_cost).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">₱{Number(lab.total_cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="font-semibold">
                     <TableCell colSpan={2}>Total Labor Cost</TableCell>
-                    <TableCell className="text-right">₱{totalLaborCost.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₱{totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
