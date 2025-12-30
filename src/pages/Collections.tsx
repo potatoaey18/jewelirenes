@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Download } from 'lucide-react';
+import { Plus, Search, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -688,6 +688,7 @@ export default function Collections() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Record Payment</DialogTitle>
+              <DialogDescription>Add a payment to this payment plan</DialogDescription>
             </DialogHeader>
             <form onSubmit={handlePaymentSubmit} className="space-y-4">
               <div>
@@ -750,7 +751,16 @@ export default function Collections() {
                   onChange={(e) => setPaymentFormData({...paymentFormData, invoice_image: e.target.files?.[0] || null})}
                 />
               </div>
-              <Button type="submit" className="w-full">Record Payment</Button>
+              <Button type="submit" className="w-full" disabled={addPayment.isPending}>
+                {addPayment.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Record Payment'
+                )}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
