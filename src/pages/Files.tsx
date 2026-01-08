@@ -471,10 +471,16 @@ const Files = () => {
                               variant="ghost"
                               size="sm"
                               className="flex-1"
-                              onClick={() => {
-                                if (cf.files?.storage_path) {
-                                  const { data } = supabase.storage.from("customer-files").getPublicUrl(cf.files.storage_path);
-                                  window.open(data.publicUrl, "_blank");
+                              onClick={async () => {
+                                try {
+                                  if (!cf.files?.storage_path) return;
+                                  const { data, error } = await supabase.storage
+                                    .from("customer-files")
+                                    .createSignedUrl(cf.files.storage_path, 3600);
+                                  if (error) throw error;
+                                  window.open(data.signedUrl, "_blank");
+                                } catch (err: any) {
+                                  toast.error(err?.message || "Failed to preview file");
                                 }
                               }}
                             >
@@ -485,18 +491,23 @@ const Files = () => {
                               size="sm"
                               className="flex-1"
                               onClick={async () => {
-                                if (cf.files?.storage_path) {
-                                  const { data, error } = await supabase.storage.from("customer-files").download(cf.files.storage_path);
-                                  if (!error && data) {
-                                    const url = URL.createObjectURL(data);
-                                    const a = document.createElement("a");
-                                    a.href = url;
-                                    a.download = cf.files.name;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(url);
-                                  }
+                                try {
+                                  if (!cf.files?.storage_path) return;
+                                  const { data, error } = await supabase.storage
+                                    .from("customer-files")
+                                    .download(cf.files.storage_path);
+                                  if (error) throw error;
+
+                                  const url = URL.createObjectURL(data);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = cf.files.name;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+                                } catch (err: any) {
+                                  toast.error(err?.message || "Failed to download file");
                                 }
                               }}
                             >
