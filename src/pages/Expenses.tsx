@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,9 +36,12 @@ export default function Expenses() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [checkDetailDialogOpen, setCheckDetailDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<any>(null);
   const [selectedCheck, setSelectedCheck] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => 
@@ -158,6 +162,62 @@ export default function Expenses() {
     }
   });
 
+  const updateExpense = useMutation({
+    mutationFn: async (data: any) => {
+      const expenseData = {
+        amount: data.amount,
+        expense_date: data.expense_date,
+        category: data.category,
+        description: data.description,
+        vendor: data.vendor,
+        payment_method: data.payment_method,
+        notes: data.notes,
+        reference_number: data.reference_number || null,
+        account_name: data.account_name || null,
+        check_number: data.check_number || null,
+        check_date: data.check_date || null,
+        bank: data.bank || null,
+        branch: data.branch || null,
+      };
+
+      const { error } = await supabase
+        .from('expenses')
+        .update(expenseData)
+        .eq('id', data.id);
+      
+      if (error) throw error;
+
+      await createAuditLog('UPDATE', 'expenses', data.id, selectedExpense, expenseData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Expense updated successfully');
+      setEditDialogOpen(false);
+      setDetailDialogOpen(false);
+      resetForm();
+    }
+  });
+
+  const deleteExpense = useMutation({
+    mutationFn: async (expense: any) => {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expense.id);
+      
+      if (error) throw error;
+
+      await createAuditLog('DELETE', 'expenses', expense.id, expense, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Expense deleted successfully');
+      setDeleteDialogOpen(false);
+      setDetailDialogOpen(false);
+      setExpenseToDelete(null);
+    }
+  });
+
   const resetForm = () => {
     setFormData({
       amount: '',
@@ -182,6 +242,40 @@ export default function Expenses() {
     e.preventDefault();
     const numericAmount = parseCurrency(formData.amount);
     createExpense.mutate({ ...formData, amount: numericAmount });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericAmount = parseCurrency(formData.amount);
+    updateExpense.mutate({ ...formData, amount: numericAmount, id: selectedExpense?.id });
+  };
+
+  const handleEditClick = (expense: any) => {
+    setFormData({
+      amount: expense.amount?.toString() || '',
+      expense_date: expense.expense_date ? new Date(expense.expense_date).toISOString().split('T')[0] : '',
+      category: expense.category || '',
+      description: expense.description || '',
+      vendor: expense.vendor || '',
+      payment_method: expense.payment_method || '',
+      notes: expense.notes || '',
+      reference_number: expense.reference_number || '',
+      account_name: expense.account_name || '',
+      check_number: expense.check_number || '',
+      check_date: expense.check_date ? new Date(expense.check_date).toISOString().split('T')[0] : '',
+      bank: expense.bank || '',
+      branch: expense.branch || '',
+      invoice_number: '',
+      expiry_date: ''
+    });
+    setDetailDialogOpen(false);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (expense: any) => {
+    setExpenseToDelete(expense);
+    setDetailDialogOpen(false);
+    setDeleteDialogOpen(true);
   };
 
   const filteredExpenses = expenses.filter(expense =>
@@ -667,6 +761,8 @@ export default function Expenses() {
           expense={selectedExpense}
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
         />
 
         <CheckDetailDialog
@@ -674,6 +770,218 @@ export default function Expenses() {
           open={checkDetailDialogOpen}
           onOpenChange={setCheckDetailDialogOpen}
         />
+
+        {/* Edit Expense Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Expense</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="edit-amount" className="text-base font-semibold mb-2 block">Amount (₱)</Label>
+                  <CurrencyInput
+                    id="edit-amount"
+                    required
+                    value={formData.amount}
+                    onChange={(display) => setFormData({...formData, amount: display})}
+                    className="h-12 text-base"
+                    showPesoSign
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-expense_date" className="text-base font-semibold mb-2 block">Date</Label>
+                  <Input
+                    id="edit-expense_date"
+                    type="date"
+                    required
+                    value={formData.expense_date}
+                    onChange={(e) => setFormData({...formData, expense_date: e.target.value})}
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-category" className="text-base font-semibold mb-2 block">Category</Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Supplies">Supplies</SelectItem>
+                      <SelectItem value="Utilities">Utilities</SelectItem>
+                      <SelectItem value="Rent">Rent</SelectItem>
+                      <SelectItem value="Salaries">Salaries</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Equipment">Equipment</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-vendor" className="text-base font-semibold mb-2 block">Vendor</Label>
+                  <VendorSearchInput
+                    id="edit-vendor"
+                    value={formData.vendor}
+                    onChange={(value) => setFormData({...formData, vendor: value})}
+                    vendors={uniqueVendors}
+                    placeholder="Search or enter vendor..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-payment_method" className="text-base font-semibold mb-2 block">Payment Method</Label>
+                  <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Credit Card">Credit Card</SelectItem>
+                      <SelectItem value="Debit Card">Debit Card</SelectItem>
+                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="Check">Check</SelectItem>
+                      <SelectItem value="GCash">GCash</SelectItem>
+                      <SelectItem value="BDO">BDO</SelectItem>
+                      <SelectItem value="BPI">BPI</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Card/Online Payment Transaction Fields */}
+                {(['Credit Card', 'Debit Card'].includes(formData.payment_method) || ['GCash', 'BDO', 'BPI', 'Bank Transfer'].includes(formData.payment_method)) && (
+                  <>
+                    <div>
+                      <Label htmlFor="edit-reference_number" className="text-base font-semibold mb-2 block">
+                        {['Credit Card', 'Debit Card'].includes(formData.payment_method) ? 'Transaction/Reference Number' : 'Reference Number'}
+                      </Label>
+                      <Input
+                        id="edit-reference_number"
+                        value={formData.reference_number}
+                        onChange={(e) => setFormData({...formData, reference_number: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-account_name" className="text-base font-semibold mb-2 block">
+                        {['Credit Card', 'Debit Card'].includes(formData.payment_method) ? 'Card Holder / Account Name' : 'Account Name'}
+                      </Label>
+                      <Input
+                        id="edit-account_name"
+                        value={formData.account_name}
+                        onChange={(e) => setFormData({...formData, account_name: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    {['GCash', 'BDO', 'BPI', 'Bank Transfer'].includes(formData.payment_method) && (
+                      <div>
+                        <Label htmlFor="edit-bank" className="text-base font-semibold mb-2 block">Bank / Provider</Label>
+                        <Input
+                          id="edit-bank"
+                          value={formData.bank}
+                          onChange={(e) => setFormData({...formData, bank: e.target.value})}
+                          className="h-12 text-base"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Check Payment Fields */}
+                {formData.payment_method === 'Check' && (
+                  <>
+                    <div>
+                      <Label htmlFor="edit-bank" className="text-base font-semibold mb-2 block">Bank *</Label>
+                      <Input
+                        id="edit-bank"
+                        required
+                        value={formData.bank}
+                        onChange={(e) => setFormData({...formData, bank: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-branch" className="text-base font-semibold mb-2 block">Branch *</Label>
+                      <Input
+                        id="edit-branch"
+                        required
+                        value={formData.branch}
+                        onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-check_number" className="text-base font-semibold mb-2 block">Check Number *</Label>
+                      <Input
+                        id="edit-check_number"
+                        required
+                        value={formData.check_number}
+                        onChange={(e) => setFormData({...formData, check_number: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-check_date" className="text-base font-semibold mb-2 block">Check Date *</Label>
+                      <Input
+                        id="edit-check_date"
+                        type="date"
+                        required
+                        value={formData.check_date}
+                        onChange={(e) => setFormData({...formData, check_date: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="edit-description" className="text-base font-semibold mb-2 block">Description</Label>
+                  <Input
+                    id="edit-description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="edit-notes" className="text-base font-semibold mb-2 block">Notes</Label>
+                  <Textarea
+                    id="edit-notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    className="min-h-[100px] text-base"
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full text-lg" disabled={updateExpense.isPending}>
+                {updateExpense.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : 'Update Expense'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this expense? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => expenseToDelete && deleteExpense.mutate(expenseToDelete)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteExpense.isPending ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

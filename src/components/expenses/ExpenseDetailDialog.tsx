@@ -1,6 +1,8 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface Expense {
   id: string;
@@ -24,9 +26,11 @@ interface ExpenseDetailDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (expense: Expense) => void;
+  onDelete?: (expense: Expense) => void;
 }
 
-export function ExpenseDetailDialog({ expense, open, onOpenChange }: ExpenseDetailDialogProps) {
+export function ExpenseDetailDialog({ expense, open, onOpenChange, onEdit, onDelete }: ExpenseDetailDialogProps) {
   if (!expense) return null;
 
   const isCheckPayment = expense.payment_method === 'Check';
@@ -158,6 +162,29 @@ export function ExpenseDetailDialog({ expense, open, onOpenChange }: ExpenseDeta
             Created: {new Date(expense.created_at).toLocaleString()}
           </div>
         </div>
+
+        {(onEdit || onDelete) && (
+          <DialogFooter className="flex-row gap-2 sm:justify-between">
+            {onDelete && (
+              <Button
+                variant="destructive"
+                onClick={() => onDelete(expense)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
+            {onEdit && (
+              <Button
+                variant="outline"
+                onClick={() => onEdit(expense)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
