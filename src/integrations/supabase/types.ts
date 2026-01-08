@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -679,24 +706,36 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           email: string
           full_name: string | null
           id: string
+          rejection_reason: string | null
+          status: string
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           email: string
           full_name?: string | null
           id: string
+          rejection_reason?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
+          rejection_reason?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []

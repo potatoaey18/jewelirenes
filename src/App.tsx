@@ -17,6 +17,7 @@ import Collections from "./pages/Collections";
 import Files from "./pages/Files";
 import Logs from "./pages/Logs";
 import Auth from "./pages/Auth";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/collections" element={<ProtectedRoute><Collections /></ProtectedRoute>} />
                 <Route path="/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
                 <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

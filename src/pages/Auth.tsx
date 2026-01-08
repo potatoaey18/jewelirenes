@@ -12,6 +12,7 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,19 +52,33 @@ const Auth = () => {
           description: "Successfully logged in.",
         });
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              full_name: fullName,
+            }
           },
         });
         
         if (error) throw error;
         
+        // Send admin notification email (non-blocking)
+        if (data.user) {
+          supabase.functions.invoke('notify-admin-signup', {
+            body: {
+              userEmail: email,
+              userName: fullName,
+              signupDate: new Date().toISOString()
+            }
+          }).catch(err => console.error('Failed to send admin notification:', err));
+        }
+        
         toast({
           title: "Account created!",
-          description: "You can now log in with your credentials.",
+          description: "Your account is pending admin approval. You'll be notified once approved.",
         });
         setIsLogin(true);
       }
@@ -92,6 +107,20 @@ const Auth = () => {
         </CardHeader>
         <CardContent className="px-6 sm:px-8 pb-6 sm:pb-8">
           <form onSubmit={handleAuth} className="space-y-5">
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="text-sm sm:text-base font-medium">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required={!isLogin}
+                  className="h-12 sm:h-11 text-base"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm sm:text-base font-medium">Email</Label>
               <Input
