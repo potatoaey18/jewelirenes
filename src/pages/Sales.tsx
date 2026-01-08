@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Minus, Trash2, CreditCard, RotateCcw, Package, Archive } from "lucide-react";
+import { Search, Plus, Minus, Trash2, CreditCard, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,13 +67,9 @@ const Sales = () => {
   const [items, setItems] = useState<FinishedItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [soldViewMode, setSoldViewMode] = useState<ViewMode>(() => 
     (localStorage.getItem("sales-sold-view") as ViewMode) || "cards"
-  );
-  const [binViewMode, setBinViewMode] = useState<ViewMode>(() => 
-    (localStorage.getItem("sales-bin-view") as ViewMode) || "cards"
   );
 
   useEffect(() => {
@@ -113,67 +109,9 @@ const Sales = () => {
     }
   });
 
-  // Fetch deleted transactions (bin)
-  const { data: deletedTransactions = [] } = useQuery({
-    queryKey: ['deleted-transactions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          customers(name),
-          transaction_items(product_name, quantity, unit_price)
-        `)
-        .not('deleted_at', 'is', null)
-        .order('deleted_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Transaction[];
-    }
-  });
 
-  // Soft delete mutation
-  const softDeleteMutation = useMutation({
-    mutationFn: async (transactionId: string) => {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', transactionId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sold-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['deleted-transactions'] });
-      toast.success('Transaction moved to bin');
-      setDeleteDialogOpen(false);
-      setSelectedTransaction(null);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete transaction');
-    }
-  });
-
-  // Restore mutation
-  const restoreMutation = useMutation({
-    mutationFn: async (transactionId: string) => {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ deleted_at: null })
-        .eq('id', transactionId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sold-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['deleted-transactions'] });
-      toast.success('Transaction restored');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to restore transaction');
-    }
-  });
-
-  // Permanent delete mutation
-  const permanentDeleteMutation = useMutation({
+  // Delete mutation
+  const deleteMutation = useMutation({
     mutationFn: async (transactionId: string) => {
       // First delete transaction items
       const { error: itemsError } = await supabase
@@ -190,15 +128,16 @@ const Sales = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deleted-transactions'] });
-      toast.success('Transaction permanently deleted');
-      setPermanentDeleteDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['sold-transactions'] });
+      toast.success('Transaction deleted');
+      setDeleteDialogOpen(false);
       setSelectedTransaction(null);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to delete transaction');
     }
   });
+
 
   const addToCart = (item: FinishedItem) => {
     const existingItem = cart.find((cartItem) => cartItem.id === item.id);
@@ -266,7 +205,7 @@ const Sales = () => {
       <Navigation />
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
         <Tabs defaultValue="shop" className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="shop" className="text-xs sm:text-sm gap-1">
               <Package className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Shop</span>
@@ -276,11 +215,6 @@ const Sales = () => {
               <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Sold ({soldTransactions.length})</span>
               <span className="xs:hidden">Sold</span>
-            </TabsTrigger>
-            <TabsTrigger value="bin" className="text-xs sm:text-sm gap-1">
-              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Bin ({deletedTransactions.length})</span>
-              <span className="xs:hidden">Bin</span>
             </TabsTrigger>
           </TabsList>
 
@@ -527,137 +461,6 @@ const Sales = () => {
             </Card>
           </TabsContent>
 
-          {/* Bin Tab */}
-          <TabsContent value="bin">
-            <Card className="p-3 sm:p-6">
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
-                  <h2 className="text-lg sm:text-2xl font-bold">Bin</h2>
-                </div>
-                <ViewToggle 
-                  viewMode={binViewMode} 
-                  onViewModeChange={(mode) => {
-                    setBinViewMode(mode);
-                    localStorage.setItem("sales-bin-view", mode);
-                  }} 
-                />
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
-                Deleted transactions can be restored or permanently deleted.
-              </p>
-              
-              {binViewMode === "cards" ? (
-                <div className="space-y-3">
-                  {deletedTransactions.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">Bin is empty</div>
-                  ) : (
-                    deletedTransactions.map((transaction) => (
-                      <Card key={transaction.id} className="overflow-hidden opacity-75">
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold">{transaction.customers?.name || 'Unknown'}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Deleted: {new Date(transaction.deleted_at!).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {transaction.transaction_items?.slice(0, 2).map((item, idx) => (
-                              <div key={idx}>{item.quantity}x {item.product_name}</div>
-                            ))}
-                            {transaction.transaction_items?.length > 2 && (
-                              <span className="text-xs">+{transaction.transaction_items.length - 2} more</span>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center pt-2 border-t">
-                            <span className="font-bold">{formatPeso(transaction.total_amount)}</span>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => restoreMutation.mutate(transaction.id)}
-                              >
-                                <RotateCcw className="h-4 w-4 text-green-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedTransaction(transaction);
-                                  setPermanentDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              ) : (
-                /* Desktop Table View */
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Deleted On</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {deletedTransactions.map((transaction) => (
-                        <TableRow key={transaction.id} className="opacity-75">
-                          <TableCell>{new Date(transaction.deleted_at!).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-medium">{transaction.customers?.name || 'Unknown'}</TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              {transaction.transaction_items?.slice(0, 2).map((item, idx) => (
-                                <div key={idx} className="text-sm">{item.quantity}x {item.product_name}</div>
-                              ))}
-                              {transaction.transaction_items?.length > 2 && (
-                                <span className="text-xs text-muted-foreground">+{transaction.transaction_items.length - 2} more</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">{formatPeso(transaction.total_amount)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => restoreMutation.mutate(transaction.id)} title="Restore">
-                                <RotateCcw className="h-4 w-4 text-green-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedTransaction(transaction);
-                                  setPermanentDeleteDialogOpen(true);
-                                }}
-                                title="Delete permanently"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {deletedTransactions.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Bin is empty</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
 
@@ -669,32 +472,11 @@ const Sales = () => {
         onSuccess={handleCheckoutSuccess}
       />
 
-      {/* Move to Bin Dialog */}
+      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Move to Bin?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This transaction will be moved to the bin. You can restore it later or delete it permanently.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => selectedTransaction && softDeleteMutation.mutate(selectedTransaction.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Move to Bin
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Permanent Delete Dialog */}
-      <AlertDialog open={permanentDeleteDialogOpen} onOpenChange={setPermanentDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This transaction and all its items will be permanently deleted.
             </AlertDialogDescription>
@@ -702,10 +484,10 @@ const Sales = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => selectedTransaction && permanentDeleteMutation.mutate(selectedTransaction.id)}
+              onClick={() => selectedTransaction && deleteMutation.mutate(selectedTransaction.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Permanently
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
