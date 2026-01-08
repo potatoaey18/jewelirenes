@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen, LogOut, DollarSign, Wallet, FileText, Menu, UserCog } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Users, Crown, FolderOpen, LogOut, DollarSign, Wallet, FileText, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Navigation = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -27,29 +26,15 @@ const Navigation = () => {
     { to: "/collections", icon: Wallet, label: "Collections" },
     { to: "/files", icon: FolderOpen, label: "Files" },
     { to: "/logs", icon: FileText, label: "Logs" },
-    ...(isAdmin ? [{ to: "/users", icon: UserCog, label: "Users" }] : []),
   ];
 
   useEffect(() => {
-    const checkAdmin = async (userId: string) => {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
-      setIsAdmin(!!data);
-    };
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) checkAdmin(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) checkAdmin(session.user.id);
-      else setIsAdmin(false);
     });
 
     return () => subscription.unsubscribe();
