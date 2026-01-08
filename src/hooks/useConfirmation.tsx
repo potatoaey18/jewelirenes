@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2 } from "lucide-react";
+
 
 type ActionType = "create" | "update" | "delete" | "restore" | "custom";
 
@@ -80,13 +80,11 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    setState((prev) => ({ ...prev, isLoading: true }));
-    // Small delay to show loading state
-    setTimeout(() => {
-      resolveRef.current?.(true);
-      setState({ isOpen: false, isLoading: false });
-    }, 100);
+  const handleConfirm = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resolveRef.current?.(true);
+    setState({ isOpen: false, isLoading: false });
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -121,17 +119,9 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
-              disabled={state.isLoading}
               className={isDestructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
-              {state.isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                state.confirmLabel || defaults.confirmLabel
-              )}
+              {state.confirmLabel || defaults.confirmLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
