@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Building2, Receipt, Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
+import { useConfirmation } from '@/hooks/useConfirmation';
 
 interface VendorDirectoryProps {
   expenses: any[];
@@ -29,6 +29,7 @@ interface VendorSummary {
 
 export function VendorDirectory({ expenses }: VendorDirectoryProps) {
   const { user } = useAuth();
+  const { confirm } = useConfirmation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -343,29 +344,20 @@ export function VendorDirectory({ expenses }: VendorDirectoryProps) {
                           </form>
                         </DialogContent>
                       </Dialog>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Vendor?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete all {vendor.transactionCount} expense(s) 
-                              totaling ₱{vendor.totalAmount.toLocaleString()} for "{vendor.name}". 
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteVendor.mutate(vendor.name)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={async () => {
+                          const confirmed = await confirm({
+                            actionType: 'delete',
+                            title: 'Delete Vendor',
+                            description: `This will permanently delete all ${vendor.transactionCount} expense(s) totaling ₱${vendor.totalAmount.toLocaleString()} for "${vendor.name}". This action cannot be undone.`,
+                          });
+                          if (confirmed) deleteVendor.mutate(vendor.name);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

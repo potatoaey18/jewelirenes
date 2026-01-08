@@ -12,6 +12,7 @@ import { createAuditLog } from "@/lib/auditLog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useConfirmation } from "@/hooks/useConfirmation";
 
 interface Material {
   material_id: string;
@@ -50,6 +51,7 @@ const ITEM_TYPES = [
 ];
 
 export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any) {
+  const { confirm } = useConfirmation();
   const [loading, setLoading] = useState(false);
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -282,6 +284,16 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const confirmed = await confirm({
+      actionType: item ? 'update' : 'create',
+      title: item ? 'Update Item' : 'Add Finished Item',
+      description: item
+        ? `Are you sure you want to save changes to "${formData.name}"?`
+        : `Are you sure you want to add "${formData.name}" as a finished item?`,
+    });
+    if (!confirmed) return;
+
     setLoading(true);
 
     try {

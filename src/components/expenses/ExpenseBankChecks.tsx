@@ -12,11 +12,11 @@ import { Plus, Search, Download, Pencil, Trash2, FileText, Banknote, Loader2 } f
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { Badge } from '@/components/ui/badge';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from '@/lib/pdfUtils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { formatPeso, parseCurrency } from '@/lib/currency';
@@ -39,6 +39,7 @@ interface ExpenseBankCheck {
 
 export function ExpenseBankChecks() {
   const { user } = useAuth();
+  const { confirm } = useConfirmation();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCheck, setEditingCheck] = useState<ExpenseBankCheck | null>(null);
@@ -461,27 +462,20 @@ export function ExpenseBankChecks() {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(check)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Bank Check?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the bank check record.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteBankCheck.mutate(check.id)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={async () => {
+                          const confirmed = await confirm({
+                            actionType: 'delete',
+                            title: 'Delete Bank Check',
+                            description: `This action cannot be undone. Are you sure you want to delete check #${check.check_number}?`,
+                          });
+                          if (confirmed) deleteBankCheck.mutate(check.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

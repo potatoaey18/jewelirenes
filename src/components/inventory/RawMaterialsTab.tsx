@@ -5,17 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { MaterialUsageDialog } from "./MaterialUsageDialog";
+import { useConfirmation } from "@/hooks/useConfirmation";
 
 interface RawMaterialsTabProps {
   refreshTrigger: number;
@@ -23,9 +14,9 @@ interface RawMaterialsTabProps {
 }
 
 export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps) {
+  const { confirm } = useConfirmation();
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [usageOpen, setUsageOpen] = useState(false);
 
@@ -50,14 +41,19 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
+  const handleDelete = async (material: any) => {
+    const confirmed = await confirm({
+      actionType: 'delete',
+      title: 'Delete Material',
+      description: `Are you sure you want to delete "${material.name}"? This action cannot be undone.`,
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
         .from("raw_materials")
         .delete()
-        .eq("id", deleteId);
+        .eq("id", material.id);
 
       if (error) throw error;
 
@@ -66,8 +62,6 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
     } catch (error) {
       console.error("Error deleting material:", error);
       toast.error("Failed to delete material");
-    } finally {
-      setDeleteId(null);
     }
   };
 
@@ -145,7 +139,7 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setDeleteId(material.id)}
+                  onClick={() => handleDelete(material)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -154,21 +148,6 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
           </Card>
         ))}
       </div>
-
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Material</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this material? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <MaterialUsageDialog
         open={usageOpen}

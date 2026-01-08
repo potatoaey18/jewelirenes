@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +14,7 @@ import { Plus, Search, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/hooks/useAuth';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { VendorDirectory } from '@/components/expenses/VendorDirectory';
 import { ExpenseBankChecks } from '@/components/expenses/ExpenseBankChecks';
 import { VendorSearchInput } from '@/components/expenses/VendorSearchInput';
@@ -34,14 +34,13 @@ const CHECK_PAYMENT_METHOD = 'Check';
 
 export default function Expenses() {
   const { user } = useAuth();
+  const { confirm } = useConfirmation();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [checkDetailDialogOpen, setCheckDetailDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
-  const [expenseToDelete, setExpenseToDelete] = useState<any>(null);
   const [selectedCheck, setSelectedCheck] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => 
@@ -212,9 +211,7 @@ export default function Expenses() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast.success('Expense deleted successfully');
-      setDeleteDialogOpen(false);
       setDetailDialogOpen(false);
-      setExpenseToDelete(null);
     }
   });
 
@@ -238,14 +235,26 @@ export default function Expenses() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const confirmed = await confirm({
+      actionType: 'create',
+      title: 'Add New Expense',
+      description: `Are you sure you want to add this expense of ${formatPeso(parseCurrency(formData.amount))}?`,
+    });
+    if (!confirmed) return;
     const numericAmount = parseCurrency(formData.amount);
     createExpense.mutate({ ...formData, amount: numericAmount });
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const confirmed = await confirm({
+      actionType: 'update',
+      title: 'Update Expense',
+      description: 'Are you sure you want to save these changes to this expense?',
+    });
+    if (!confirmed) return;
     const numericAmount = parseCurrency(formData.amount);
     updateExpense.mutate({ ...formData, amount: numericAmount, id: selectedExpense?.id });
   };
@@ -272,10 +281,15 @@ export default function Expenses() {
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (expense: any) => {
-    setExpenseToDelete(expense);
+  const handleDeleteClick = async (expense: any) => {
     setDetailDialogOpen(false);
-    setDeleteDialogOpen(true);
+    const confirmed = await confirm({
+      actionType: 'delete',
+      title: 'Delete Expense',
+      description: `This action cannot be undone. Are you sure you want to delete this ${expense.category || 'expense'} record?`,
+    });
+    if (!confirmed) return;
+    deleteExpense.mutate(expense);
   };
 
   const filteredExpenses = expenses.filter(expense =>
@@ -962,26 +976,6 @@ export default function Expenses() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Expense</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this expense? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => expenseToDelete && deleteExpense.mutate(expenseToDelete)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleteExpense.isPending ? 'Deleting...' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </div>
   );
