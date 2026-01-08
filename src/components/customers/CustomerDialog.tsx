@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
 import { createAuditLog } from "@/lib/auditLog";
+import { useConfirmation } from "@/hooks/useConfirmation";
 
 interface CustomerDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface CustomerDialogProps {
 }
 
 export const CustomerDialog = ({ open, onOpenChange, customer, onSuccess }: CustomerDialogProps) => {
+  const { confirm } = useConfirmation();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -70,6 +72,16 @@ export const CustomerDialog = ({ open, onOpenChange, customer, onSuccess }: Cust
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const confirmed = await confirm({
+      actionType: customer ? 'update' : 'create',
+      title: customer ? 'Update Customer' : 'Add Customer',
+      description: customer
+        ? `Are you sure you want to save changes to "${formData.name}"?`
+        : `Are you sure you want to add "${formData.name}" as a new customer?`,
+    });
+    if (!confirmed) return;
+
     setLoading(true);
 
     try {

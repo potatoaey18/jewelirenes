@@ -5,17 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { ItemDetailsDialog } from "./ItemDetailsDialog";
+import { useConfirmation } from "@/hooks/useConfirmation";
 
 interface FinishedItemsTabProps {
   refreshTrigger: number;
@@ -23,9 +14,9 @@ interface FinishedItemsTabProps {
 }
 
 export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabProps) {
+  const { confirm } = useConfirmation();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -51,15 +42,19 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
+  const handleDelete = async (item: any) => {
+    const confirmed = await confirm({
+      actionType: 'delete',
+      title: 'Move to Bin',
+      description: `Are you sure you want to move "${item.name}" to the bin? You can restore it later.`,
+    });
+    if (!confirmed) return;
 
     try {
-      // Soft delete - set deleted_at timestamp
       const { error } = await supabase
         .from("finished_items")
         .update({ deleted_at: new Date().toISOString() })
-        .eq("id", deleteId);
+        .eq("id", item.id);
 
       if (error) throw error;
 
@@ -68,8 +63,6 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
     } catch (error) {
       console.error("Error deleting item:", error);
       toast.error("Failed to delete item");
-    } finally {
-      setDeleteId(null);
     }
   };
 
@@ -158,7 +151,7 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setDeleteId(item.id)}
+                  onClick={() => handleDelete(item)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -167,21 +160,6 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
           </Card>
         ))}
       </div>
-
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-      <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Move to Bin</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to move this item to the bin? You can restore it later.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Move to Bin</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <ItemDetailsDialog
         open={detailsOpen}

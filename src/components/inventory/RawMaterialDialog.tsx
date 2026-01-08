@@ -9,8 +9,10 @@ import { toast } from "sonner";
 import { createAuditLog } from "@/lib/auditLog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { parseCurrency, formatCurrency } from "@/lib/currency";
+import { useConfirmation } from "@/hooks/useConfirmation";
 
 export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: any) {
+  const { confirm } = useConfirmation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -52,6 +54,15 @@ export function RawMaterialDialog({ open, onOpenChange, material, onSuccess }: a
       toast.error("Please specify the type of other material");
       return;
     }
+
+    const confirmed = await confirm({
+      actionType: material ? 'update' : 'create',
+      title: material ? 'Update Material' : 'Add Raw Material',
+      description: material
+        ? `Are you sure you want to save changes to "${formData.name}"?`
+        : `Are you sure you want to add "${formData.name}" to raw materials?`,
+    });
+    if (!confirmed) return;
     
     setLoading(true);
 
