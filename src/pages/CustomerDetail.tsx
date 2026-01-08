@@ -163,10 +163,14 @@ const CustomerDetail = () => {
 
   const handlePreviewFile = async (storagePath: string) => {
     try {
-      const { data } = supabase.storage.from("customer-files").getPublicUrl(storagePath);
-      window.open(data.publicUrl, "_blank");
+      const { data, error } = await supabase.storage
+        .from("customer-files")
+        .createSignedUrl(storagePath, 3600); // 1 hour
+
+      if (error) throw error;
+      window.open(data.signedUrl, "_blank");
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to preview file");
     }
   };
 
