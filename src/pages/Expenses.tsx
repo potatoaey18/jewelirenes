@@ -674,7 +674,7 @@ export default function Expenses() {
         </Card>
 
         <Tabs defaultValue="expenses" className="space-y-4 sm:space-y-6">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="expenses" className="text-xs sm:text-sm">Expenses</TabsTrigger>
             <TabsTrigger value="vendors" className="text-xs sm:text-sm">Vendors</TabsTrigger>
             <TabsTrigger value="bank-checks" className="text-xs sm:text-sm">Checks</TabsTrigger>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FolderPlus, Upload, Trash2, Folder, File, Download, Eye, Users, Building2 } from "lucide-react";
+import { FolderPlus, Upload, Trash2, Folder, File, Download, Users, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -234,19 +234,6 @@ const Files = () => {
     }
   };
 
-  const handlePreviewFile = async (storagePath: string) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("file-system")
-        .createSignedUrl(storagePath, 3600); // 1 hour expiry
-      
-      if (error) throw error;
-      window.open(data.signedUrl, "_blank");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to preview file");
-    }
-  };
-
   const handleDownloadFile = async (storagePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage.from("file-system").download(storagePath);
@@ -296,18 +283,18 @@ const Files = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
-            <TabsTrigger value="all" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="all" className="text-xs sm:text-sm gap-1">
               <Folder className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">All</span>
+              All
             </TabsTrigger>
-            <TabsTrigger value="clients" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+            <TabsTrigger value="clients" className="text-xs sm:text-sm gap-1">
               <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Clients</span> ({customers.length})
+              Clients ({customers.length})
             </TabsTrigger>
-            <TabsTrigger value="vendors" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+            <TabsTrigger value="vendors" className="text-xs sm:text-sm gap-1">
               <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Vendors</span> ({vendors.length})
+              Vendors ({vendors.length})
             </TabsTrigger>
           </TabsList>
 
@@ -401,14 +388,6 @@ const Files = () => {
                         variant="ghost"
                         size="sm"
                         className="flex-1"
-                        onClick={() => handlePreviewFile(file.storage_path)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1"
                         onClick={() => handleDownloadFile(file.storage_path, file.name)}
                       >
                         <Download className="h-4 w-4" />
@@ -467,25 +446,6 @@ const Files = () => {
                             )}
                           </div>
                           <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1"
-                              onClick={async () => {
-                                try {
-                                  if (!cf.files?.storage_path) return;
-                                  const { data, error } = await supabase.storage
-                                    .from("customer-files")
-                                    .createSignedUrl(cf.files.storage_path, 3600);
-                                  if (error) throw error;
-                                  window.open(data.signedUrl, "_blank");
-                                } catch (err: any) {
-                                  toast.error(err?.message || "Failed to preview file");
-                                }
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"

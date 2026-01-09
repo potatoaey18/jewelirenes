@@ -337,8 +337,8 @@ const Customers = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="directory" className="w-full">
-          <TabsList className="mb-4 sm:mb-6 w-full sm:w-auto grid grid-cols-2 sm:flex">
+        <Tabs defaultValue="directory" className="w-full space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="directory" className="text-xs sm:text-sm">Directory</TabsTrigger>
             <TabsTrigger value="history" className="text-xs sm:text-sm">Master History</TabsTrigger>
           </TabsList>
