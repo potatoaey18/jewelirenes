@@ -480,7 +480,7 @@ export default function Collections() {
         </div>
 
         <Tabs defaultValue="plans" className="space-y-4 sm:space-y-6">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="plans" className="text-xs sm:text-sm">Plans</TabsTrigger>
             <TabsTrigger value="payments" className="text-xs sm:text-sm">History</TabsTrigger>
             <TabsTrigger value="checks" className="text-xs sm:text-sm">Checks</TabsTrigger>
