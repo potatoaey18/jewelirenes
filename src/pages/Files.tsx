@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { FolderPlus, Upload, Trash2, Folder, File, Download, Users, Building2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { FolderPlus, Upload, Trash2, Folder, File, Download, Users, Building2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ const Files = () => {
   const [itemToDelete, setItemToDelete] = useState<{ type: "folder" | "file"; id: string; storagePath?: string } | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   // Fetch customers for client files tab
   const { data: customers = [] } = useQuery({
@@ -270,6 +271,27 @@ const Files = () => {
     };
   });
 
+  // Filtered data based on search
+  const filteredFolders = useMemo(() => 
+    folders.filter(f => f.name.toLowerCase().includes(search.toLowerCase())),
+    [folders, search]
+  );
+  
+  const filteredFiles = useMemo(() => 
+    files.filter(f => f.name.toLowerCase().includes(search.toLowerCase())),
+    [files, search]
+  );
+  
+  const filteredCustomers = useMemo(() => 
+    customerFilesGrouped.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
+    [customerFilesGrouped, search]
+  );
+  
+  const filteredVendors = useMemo(() => 
+    vendorFilesGrouped.filter(v => v.name.toLowerCase().includes(search.toLowerCase())),
+    [vendorFilesGrouped, search]
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30">
       <Navigation />
@@ -279,6 +301,15 @@ const Files = () => {
           <div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">File Management</h2>
             <p className="text-sm sm:text-base text-muted-foreground">Organize and manage your files</p>
+          </div>
+          <div className="relative w-full sm:w-64 lg:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search files, folders, clients..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 h-10 sm:h-12"
+            />
           </div>
         </div>
 
@@ -339,7 +370,7 @@ const Files = () => {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {folders.map((folder) => (
+              {filteredFolders.map((folder) => (
                 <Card
                   key={folder.id}
                   className="cursor-pointer hover:shadow-lg transition-all group"
@@ -370,7 +401,7 @@ const Files = () => {
                 </Card>
               ))}
 
-              {files.map((file) => (
+              {filteredFiles.map((file) => (
                 <Card key={file.id} className="hover:shadow-lg transition-all group">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col items-center text-center">
@@ -405,9 +436,9 @@ const Files = () => {
                 </Card>
               ))}
 
-              {folders.length === 0 && files.length === 0 && (
+              {filteredFolders.length === 0 && filteredFiles.length === 0 && (
                 <div className="col-span-full text-center py-12 text-muted-foreground">
-                  This folder is empty. Create a folder or upload files to get started.
+                  {search ? "No files or folders match your search." : "This folder is empty. Create a folder or upload files to get started."}
                 </div>
               )}
             </div>
@@ -486,7 +517,7 @@ const Files = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-                {customerFilesGrouped.map((customer) => (
+                {filteredCustomers.map((customer) => (
                   <Card
                     key={customer.id}
                     className="cursor-pointer hover:shadow-lg transition-all"
@@ -506,9 +537,9 @@ const Files = () => {
                   </Card>
                 ))}
 
-                {customers.length === 0 && (
+                {filteredCustomers.length === 0 && (
                   <div className="col-span-full text-center py-12 text-muted-foreground">
-                    No clients yet. Add customers to see their file folders here.
+                    {search ? "No clients match your search." : "No clients yet. Add customers to see their file folders here."}
                   </div>
                 )}
               </div>
@@ -518,7 +549,7 @@ const Files = () => {
           {/* Vendors Tab */}
           <TabsContent value="vendors">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {vendorFilesGrouped.map((vendor) => (
+              {filteredVendors.map((vendor) => (
                 <Card
                   key={vendor.name}
                   className="hover:shadow-lg transition-all"
@@ -537,9 +568,9 @@ const Files = () => {
                 </Card>
               ))}
 
-              {vendors.length === 0 && (
+              {filteredVendors.length === 0 && (
                 <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No vendors yet. Add expenses with vendors to see their file folders here.
+                  {search ? "No vendors match your search." : "No vendors yet. Add expenses with vendors to see their file folders here."}
                 </div>
               )}
             </div>
