@@ -389,14 +389,14 @@ export default function Expenses() {
             <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-1 sm:mb-2">Expenses</h1>
             <p className="text-sm sm:text-base lg:text-lg text-muted-foreground">Track and manage business expenses</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64 lg:w-80">
-              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
+          <div className="grid grid-cols-4 sm:flex gap-2 w-full md:w-auto">
+            <div className="relative col-span-4 sm:col-span-1 md:w-64 lg:w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search expenses..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 sm:pl-12 h-10 sm:h-12 text-sm sm:text-base"
+                className="pl-10 h-9 sm:h-10 text-xs sm:text-sm"
               />
             </div>
             <CsvSampleDownload
@@ -455,9 +455,10 @@ export default function Expenses() {
             />
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full md:w-auto h-10 sm:h-12">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Expense
+                <Button size="sm" className="text-xs sm:text-sm">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Expense</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

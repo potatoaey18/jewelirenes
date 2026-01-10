@@ -145,16 +145,18 @@ export default function Inventory() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-end gap-2">
             {activeTab === "items" && (
               <>
-                <Button onClick={exportItemsPDF} variant="outline" className="w-full sm:w-auto">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF
+                <Button onClick={exportItemsPDF} variant="outline" size="sm" className="text-xs sm:text-sm">
+                  <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Export PDF</span>
+                  <span className="sm:hidden">PDF</span>
                 </Button>
-                <Button onClick={handleAddItem} className="w-full sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
+                <Button onClick={handleAddItem} size="sm" className="text-xs sm:text-sm">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Item</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </>
             )}
@@ -214,13 +216,15 @@ export default function Inventory() {
                     handleSuccess();
                   }}
                 />
-                <Button onClick={exportMaterialsPDF} variant="outline" className="w-full sm:w-auto">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF
+                <Button onClick={exportMaterialsPDF} variant="outline" size="sm" className="text-xs sm:text-sm">
+                  <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Export PDF</span>
+                  <span className="sm:hidden">PDF</span>
                 </Button>
-                <Button onClick={handleAddMaterial} className="w-full sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Material
+                <Button onClick={handleAddMaterial} size="sm" className="text-xs sm:text-sm">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Material</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </>
             )}

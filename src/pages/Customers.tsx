@@ -279,7 +279,7 @@ const Customers = () => {
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Customers</h2>
             <p className="text-sm sm:text-base text-muted-foreground">Manage your client relationships</p>
           </div>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <div className="grid grid-cols-3 sm:flex gap-2 w-full sm:w-auto">
             <CsvSampleDownload
               title="Import Customers"
               columns={[
@@ -329,10 +329,12 @@ const Customers = () => {
             />
             <Button
               onClick={handleAdd}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
+              size="sm"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs sm:text-sm"
             >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Customer
+              <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Customer</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
@@ -446,22 +448,26 @@ const Customers = () => {
           </TabsContent>
 
           <TabsContent value="history">
-            <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4 sm:mb-6">
+            <div className="grid grid-cols-2 sm:flex sm:justify-end gap-2 mb-4 sm:mb-6">
               <Button
                 onClick={handleExportMasterHistoryImage}
                 variant="outline"
-                className="w-full sm:w-auto"
+                size="sm"
+                className="text-xs sm:text-sm"
               >
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Export Image
+                <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export Image</span>
+                <span className="sm:hidden">Image</span>
               </Button>
               <Button
                 onClick={handleExportMasterHistoryPDF}
                 variant="outline"
-                className="w-full sm:w-auto"
+                size="sm"
+                className="text-xs sm:text-sm"
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Export PDF
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export PDF</span>
+                <span className="sm:hidden">PDF</span>
               </Button>
             </div>
 
