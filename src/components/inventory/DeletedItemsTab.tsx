@@ -6,6 +6,7 @@ import { RotateCcw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useConfirmation } from "@/hooks/useConfirmation";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface DeletedItemsTabProps {
   refreshTrigger: number;
@@ -55,6 +56,8 @@ export function DeletedItemsTab({ refreshTrigger, onRestore }: DeletedItemsTabPr
 
       if (error) throw error;
 
+      await createAuditLog("RESTORE", "finished_items", item.id, { deleted_at: item.deleted_at }, { deleted_at: null });
+
       toast.success("Item restored successfully");
       fetchDeletedItems();
       onRestore();
@@ -93,6 +96,8 @@ export function DeletedItemsTab({ refreshTrigger, onRestore }: DeletedItemsTabPr
         .eq("id", item.id);
 
       if (error) throw error;
+
+      await createAuditLog("DELETE", "finished_items", item.id, item, null);
 
       toast.success("Item permanently deleted");
       fetchDeletedItems();
