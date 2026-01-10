@@ -379,10 +379,9 @@ export default function Collections() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="w-full md:w-auto text-xs sm:text-sm">
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">New Record</span>
-                <span className="sm:hidden">New</span>
+              <Button className="w-full md:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                New Record
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -507,8 +506,8 @@ export default function Collections() {
                       localStorage.setItem("collections-plans-view", mode);
                     }} 
                   />
-                  <Button variant="outline" size="sm" onClick={handleExportPaymentPlansPDF} className="text-xs sm:text-sm">
-                    <Download className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <Button variant="outline" onClick={handleExportPaymentPlansPDF} className="flex-1 sm:flex-none">
+                    <Download className="mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Export PDF</span>
                   </Button>
                 </div>

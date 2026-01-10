@@ -333,17 +333,15 @@ const Files = () => {
           <TabsContent value="all">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
               <div>
-                <p className="text-xs text-muted-foreground">Path: {getCurrentPath()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Path: {getCurrentPath()}</p>
               </div>
-              <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
                   onClick={() => setFolderDialogOpen(true)}
-                  size="sm"
-                  className="bg-accent hover:bg-accent/90 text-xs sm:text-sm"
+                  className="bg-accent hover:bg-accent/90 w-full sm:w-auto"
                 >
-                  <FolderPlus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">New Folder</span>
-                  <span className="sm:hidden">Folder</span>
+                  <FolderPlus className="mr-2 h-4 w-4" />
+                  New Folder
                 </Button>
                 <Input
                   type="file"
@@ -353,11 +351,10 @@ const Files = () => {
                 />
                 <Label
                   htmlFor="file-upload"
-                  className="flex items-center justify-center gap-1 sm:gap-2 cursor-pointer bg-accent text-accent-foreground px-3 py-2 rounded-md hover:bg-accent/90 text-xs sm:text-sm h-9 sm:h-10"
+                  className="flex items-center justify-center gap-2 cursor-pointer bg-accent text-accent-foreground px-4 py-2 rounded-md hover:bg-accent/90 w-full sm:w-auto"
                 >
-                  <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Upload File</span>
-                  <span className="sm:hidden">Upload</span>
+                  <Upload className="h-4 w-4" />
+                  Upload File
                 </Label>
               </div>
             </div>
