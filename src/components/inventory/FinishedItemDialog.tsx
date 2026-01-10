@@ -1,0 +1,962 @@
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createAuditLog } from "@/lib/auditLog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useConfirmation } from "@/hooks/useConfirmation";
+
+interface Material {
+  material_id: string;
+  quantity: number;
+  type?: string;
+  pieces?: number;
+  carat?: number;
+  size?: number;
+  amountPerUnit: number;
+  costPerPiece?: number;
+}
+
+interface Labor {
+  type: "diamond_setting" | "tubog";
+  pieces?: number;
+  amountPerPiece?: number;
+  fixedCost?: number;
+  staffMember?: string;
+}
+
+const ITEM_TYPES = [
+  "Ring",
+  "Pendant",
+  "Earring",
+  "Bracelet",
+  "Anklet",
+  "Necklace",
+  "Brooch",
+  "Cufflinks",
+  "Tiara",
+  "Watch",
+  "Charm",
+  "Chain",
+  "Bangle",
+  "Other"
+];
+
+export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any) {
+  const { confirm } = useConfirmation();
+  const [loading, setLoading] = useState(false);
+  const [rawMaterials, setRawMaterials] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [itemTypeOpen, setItemTypeOpen] = useState(false);
+  const [customItemType, setCustomItemType] = useState("");
+  const [formData, setFormData] = useState({
+    sku: "",
+    name: "",
+    description: "",
+    date_manufactured: new Date().toISOString().split('T')[0],
+    selling_price: "",
+    stock: "1",
+    image_url: "",
+    customer_id: "",
+    item_type: ""
+  });
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [labor, setLabor] = useState<Labor[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const handleNameChange = (value: string) => {
+    setFormData({ ...formData, name: value, sku: value });
+  };
+
+  const formatNumberWithCommas = (value: string | number): string => {
+    const num = typeof value === 'string' ? value.replace(/,/g, '') : String(value);
+    if (!num || isNaN(Number(num))) return '';
+    const parts = num.split('.');
+    parts[0] = Number(parts[0]).toLocaleString('en-US');
+    return parts.join('.');
+  };
+
+  const parseFormattedNumber = (value: string): string => {
+    return value.replace(/,/g, '');
+  };
+
+  const handleSellingPriceChange = (value: string) => {
+    // Remove commas for storage, but allow decimal input
+    const cleanValue = value.replace(/,/g, '');
+    // Only allow valid number characters
+    if (cleanValue === '' || /^[0-9]*\.?[0-9]*$/.test(cleanValue)) {
+      setFormData({ ...formData, selling_price: cleanValue });
+    }
+  };
+
+  const getDisplaySellingPrice = (): string => {
+    if (!formData.selling_price) return '';
+    return formatNumberWithCommas(formData.selling_price);
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchRawMaterials();
+      fetchCustomers();
+      if (item) {
+        const existingItemType = item.item_type || "";
+        const isCustomType = existingItemType && !ITEM_TYPES.includes(existingItemType);
+        
+        setFormData({
+          sku: item.sku || "",
+          name: item.name || "",
+          description: item.description || "",
+          date_manufactured: item.date_manufactured?.split('T')[0] || new Date().toISOString().split('T')[0],
+          selling_price: item.selling_price?.toString() || "",
+          stock: item.stock?.toString() || "0",
+          image_url: item.image_url || "",
+          customer_id: item.customer_id || "",
+          item_type: isCustomType ? "Other" : existingItemType
+        });
+        setCustomItemType(isCustomType ? existingItemType : "");
+        fetchItemMaterials(item.id);
+        fetchItemLabor(item.id);
+      } else {
+        setFormData({
+          sku: "",
+          name: "",
+          description: "",
+          date_manufactured: new Date().toISOString().split('T')[0],
+          selling_price: "",
+          stock: "1",
+          image_url: "",
+          customer_id: "",
+          item_type: ""
+        });
+        setCustomItemType("");
+        setMaterials([]);
+        setLabor([]);
+      }
+    }
+  }, [open, item]);
+
+  const fetchItemMaterials = async (itemId: string) => {
+    const { data, error } = await supabase
+      .from("item_materials")
+      .select("*, raw_materials(*)")
+      .eq("item_id", itemId);
+    
+    if (!error && data) {
+      const mappedMaterials: Material[] = data.map((im: any) => {
+        const materialType = im.raw_materials?.type;
+        const isPieceBased = materialType === "diamond" || materialType === "gem" || materialType === "south_sea_pearl";
+        
+        // For diamond/gem: cost_at_time stores the amount per carat
+        // For pearl: we calculate costPerPiece from subtotal
+        return {
+          material_id: im.material_id,
+          quantity: isPieceBased ? 0 : im.quantity_used,
+          pieces: isPieceBased ? im.quantity_used : 1,
+          carat: (materialType === "diamond" || materialType === "gem") ? (im.subtotal / ((im.quantity_used || 1) * (im.cost_at_time || 1))) : 0,
+          size: materialType === "south_sea_pearl" ? (im.raw_materials?.other_description ? parseFloat(im.raw_materials.other_description) : 0) : 0,
+          amountPerUnit: im.cost_at_time,
+          costPerPiece: materialType === "south_sea_pearl" ? (im.subtotal / (im.quantity_used || 1)) : 0
+        };
+      });
+      setMaterials(mappedMaterials);
+    }
+  };
+
+  const fetchItemLabor = async (itemId: string) => {
+    const { data, error } = await supabase
+      .from("item_labor")
+      .select("*")
+      .eq("item_id", itemId);
+    
+    if (!error && data) {
+      const mappedLabor: Labor[] = data.map((il: any) => ({
+        type: il.labor_type,
+        pieces: il.pieces,
+        amountPerPiece: il.amount_per_piece,
+        fixedCost: il.fixed_cost,
+        staffMember: il.staff_member
+      }));
+      setLabor(mappedLabor);
+    }
+  };
+
+  const fetchRawMaterials = async () => {
+    const { data, error } = await supabase
+      .from("raw_materials")
+      .select("*")
+      .order("name");
+    
+    if (!error && data) {
+      setRawMaterials(data);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, name")
+      .order("name");
+    
+    if (!error && data) {
+      setCustomers(data);
+    }
+  };
+
+  const addMaterial = () => {
+    setMaterials([...materials, { material_id: "", quantity: 0, pieces: 0, carat: 0, size: 0, amountPerUnit: 0, costPerPiece: 0 }]);
+  };
+
+  const removeMaterial = (index: number) => {
+    setMaterials(materials.filter((_, i) => i !== index));
+  };
+
+  const updateMaterial = (index: number, field: string, value: any) => {
+    const updated = [...materials];
+    updated[index] = { ...updated[index], [field]: value };
+    setMaterials(updated);
+  };
+
+  const addLabor = () => {
+    setLabor([...labor, { type: "diamond_setting" }]);
+  };
+
+  const removeLabor = (index: number) => {
+    setLabor(labor.filter((_, i) => i !== index));
+  };
+
+  const updateLabor = (index: number, field: string, value: any) => {
+    const updated = [...labor];
+    updated[index] = { ...updated[index], [field]: value };
+    setLabor(updated);
+  };
+
+  const calculateMaterialCost = (mat: Material) => {
+    const material = rawMaterials.find(m => m.id === mat.material_id);
+    if (!material) return 0;
+
+    if (material.type === "gold" || material.type === "silver") {
+      return (mat.quantity || 0) * (mat.amountPerUnit || 0);
+    } else if (material.type === "diamond" || material.type === "gem") {
+      // Diamond/Gem: pieces × carat × amount per carat
+      return (mat.pieces || 1) * (mat.carat || 0) * (mat.amountPerUnit || 0);
+    } else if (material.type === "south_sea_pearl") {
+      // Pearl: pieces × cost per piece
+      return (mat.pieces || 1) * (mat.costPerPiece || 0);
+    } else if (material.type === "other") {
+      return (mat.quantity || 0) * (mat.amountPerUnit || 0);
+    }
+    return 0;
+  };
+
+  const calculatePricePerPiece = (mat: Material) => {
+    const material = rawMaterials.find(m => m.id === mat.material_id);
+    if (!material) return 0;
+    
+    if (material.type === "diamond" || material.type === "gem") {
+      // Price per piece = carat × amount per carat
+      return (mat.carat || 0) * (mat.amountPerUnit || 0);
+    }
+    return 0;
+  };
+
+  const calculateLaborCost = (lab: Labor) => {
+    if (lab.type === "tubog") {
+      return lab.fixedCost || 0;
+    } else if (lab.type === "diamond_setting") {
+      return (lab.pieces || 0) * (lab.amountPerPiece || 0);
+    }
+    return 0;
+  };
+
+  const calculateTotalCost = () => {
+    const materialCost = materials.reduce((sum, mat) => sum + calculateMaterialCost(mat), 0);
+    const laborCost = labor.reduce((sum, lab) => sum + calculateLaborCost(lab), 0);
+    return materialCost + laborCost;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const confirmed = await confirm({
+      actionType: item ? 'update' : 'create',
+      title: item ? 'Update Item' : 'Add Finished Item',
+      description: item
+        ? `Are you sure you want to save changes to "${formData.name}"?`
+        : `Are you sure you want to add "${formData.name}" as a finished item?`,
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+
+    try {
+      let imageUrl = formData.image_url;
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const { error: uploadError, data } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrl;
+      }
+
+      const totalCost = calculateTotalCost();
+
+      const finalItemType = formData.item_type === "Other" ? customItemType : formData.item_type;
+
+      const itemData = {
+        sku: formData.sku,
+        name: formData.name,
+        description: formData.description,
+        date_manufactured: formData.date_manufactured,
+        selling_price: parseFloat(formData.selling_price),
+        stock: parseInt(formData.stock),
+        total_cost: totalCost,
+        image_url: imageUrl,
+        customer_id: formData.customer_id || null,
+        item_type: finalItemType || null
+      };
+
+      let itemId = item?.id;
+
+      if (item) {
+        const { error } = await supabase
+          .from("finished_items")
+          .update(itemData)
+          .eq("id", item.id);
+
+        if (error) throw error;
+
+        // Get existing materials to restore quantities
+        const { data: existingMaterials } = await supabase
+          .from("item_materials")
+          .select("material_id, quantity_used")
+          .eq("item_id", item.id);
+
+        // Restore quantities from old materials
+        if (existingMaterials) {
+          for (const oldMat of existingMaterials) {
+            const material = rawMaterials.find(m => m.id === oldMat.material_id);
+            if (material) {
+              const restoredQuantity = material.quantity_on_hand + oldMat.quantity_used;
+              await supabase
+                .from("raw_materials")
+                .update({ quantity_on_hand: restoredQuantity })
+                .eq("id", oldMat.material_id);
+            }
+          }
+        }
+
+        // Delete existing materials and labor
+        await supabase.from("item_materials").delete().eq("item_id", item.id);
+        await supabase.from("item_labor").delete().eq("item_id", item.id);
+
+        // Deduct new materials
+        for (const mat of materials) {
+          const material = rawMaterials.find(m => m.id === mat.material_id);
+          if (material) {
+            // Get current quantity (which includes restored amount)
+            const { data: currentMaterial } = await supabase
+              .from("raw_materials")
+              .select("quantity_on_hand")
+              .eq("id", mat.material_id)
+              .single();
+
+            if (currentMaterial) {
+              // Use pieces for piece-based materials (diamond, gem, south_sea_pearl), quantity for weight/unit-based (gold, silver, other)
+              const deductAmount = (material.type === "diamond" || material.type === "gem" || material.type === "south_sea_pearl") 
+                ? (mat.pieces || 0) 
+                : (mat.quantity || 0);
+              if (deductAmount > 0) {
+                const newQuantity = currentMaterial.quantity_on_hand - deductAmount;
+                if (newQuantity < 0) {
+                  throw new Error(`Insufficient ${material.name}. Available: ${currentMaterial.quantity_on_hand}, Required: ${deductAmount}`);
+                }
+                await supabase
+                  .from("raw_materials")
+                  .update({ quantity_on_hand: newQuantity })
+                  .eq("id", mat.material_id);
+              }
+            }
+          }
+        }
+      } else {
+        const { data: newItem, error } = await supabase
+          .from("finished_items")
+          .insert(itemData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        itemId = newItem.id;
+
+        // Deduct raw materials
+        for (const mat of materials) {
+          const material = rawMaterials.find(m => m.id === mat.material_id);
+          if (material) {
+            // Use pieces for piece-based materials (diamond, gem, south_sea_pearl), quantity for weight/unit-based (gold, silver, other)
+            const deductAmount = (material.type === "diamond" || material.type === "gem" || material.type === "south_sea_pearl") 
+              ? (mat.pieces || 0) 
+              : (mat.quantity || 0);
+            if (deductAmount > 0) {
+              const newQuantity = material.quantity_on_hand - deductAmount;
+              if (newQuantity < 0) {
+                throw new Error(`Insufficient ${material.name}. Available: ${material.quantity_on_hand}, Required: ${deductAmount}`);
+              }
+              await supabase
+                .from("raw_materials")
+                .update({ quantity_on_hand: newQuantity })
+                .eq("id", mat.material_id);
+            }
+          }
+        }
+      }
+
+      // Insert materials
+      for (const mat of materials) {
+        const material = rawMaterials.find(m => m.id === mat.material_id);
+        // Use pieces for piece-based materials, quantity for weight-based (gold/silver)
+        const quantityUsed = (material?.type === "diamond" || material?.type === "gem" || material?.type === "south_sea_pearl") 
+          ? (mat.pieces || 0) 
+          : (mat.quantity || 0);
+        await supabase.from("item_materials").insert({
+          item_id: itemId,
+          material_id: mat.material_id,
+          quantity_used: quantityUsed,
+          cost_at_time: mat.amountPerUnit,
+          subtotal: calculateMaterialCost(mat)
+        });
+      }
+
+      // Insert labor
+      for (const lab of labor) {
+        await supabase.from("item_labor").insert({
+          item_id: itemId,
+          labor_type: lab.type,
+          pieces: lab.pieces,
+          amount_per_piece: lab.amountPerPiece,
+          fixed_cost: lab.fixedCost,
+          total_cost: calculateLaborCost(lab),
+          staff_member: lab.staffMember
+        });
+      }
+
+      if (item) {
+        await createAuditLog('UPDATE', 'finished_items', item.id, { name: item.name, sku: item.sku }, itemData);
+      } else {
+        await createAuditLog('CREATE', 'finished_items', itemId, undefined, itemData);
+      }
+      toast.success(item ? "Item updated successfully" : "Item created successfully");
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error saving item:", error);
+      toast.error("Failed to save item");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMaterialType = (materialId: string) => {
+    return rawMaterials.find(m => m.id === materialId)?.type;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{item ? "Edit" : "Add"} Finished Item</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Date Manufactured</Label>
+              <Input
+                type="date"
+                value={formData.date_manufactured}
+                onChange={(e) => setFormData({ ...formData, date_manufactured: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label>SKU</Label>
+              <Input
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Item Type</Label>
+              <Popover open={itemTypeOpen} onOpenChange={setItemTypeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={itemTypeOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {formData.item_type
+                      ? formData.item_type === "Other" && customItemType
+                        ? customItemType
+                        : formData.item_type
+                      : "Select item type..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 bg-popover" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search item type..." />
+                    <CommandList>
+                      <CommandEmpty>No item type found.</CommandEmpty>
+                      <CommandGroup>
+                        {ITEM_TYPES.map((type) => (
+                          <CommandItem
+                            key={type}
+                            value={type}
+                            onSelect={() => {
+                              setFormData({ ...formData, item_type: type });
+                              if (type !== "Other") {
+                                setCustomItemType("");
+                              }
+                              setItemTypeOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.item_type === type ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {type}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {formData.item_type === "Other" && (
+                <Input
+                  placeholder="Enter custom item type..."
+                  value={customItemType}
+                  onChange={(e) => setCustomItemType(e.target.value)}
+                  className="mt-2"
+                />
+              )}
+            </div>
+            <div>
+              <Label>Customer (Optional - for custom orders)</Label>
+              <Select
+                value={formData.customer_id || "none"}
+                onValueChange={(value) => setFormData({ ...formData, customer_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer (if custom order)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No customer (general inventory)</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Selling Price (₱)</Label>
+              <Input
+                type="text"
+                value={getDisplaySellingPrice()}
+                onChange={(e) => handleSellingPriceChange(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <div>
+              <Label>Stock</Label>
+              <Input
+                type="number"
+                value={formData.stock}
+                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label>Image</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Description</Label>
+            <Textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <Label className="text-lg font-semibold">Materials Used</Label>
+              <Button type="button" size="sm" onClick={addMaterial}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add Material
+              </Button>
+            </div>
+            {materials.map((mat, index) => {
+              const materialType = getMaterialType(mat.material_id);
+              return (
+                <div key={index} className="border p-4 rounded-lg space-y-3 mb-3">
+                  <div className="flex justify-between items-start">
+                    <div className="grid grid-cols-2 gap-3 flex-1">
+                      <div>
+                        <Label>Material</Label>
+                        <Select
+                          value={mat.material_id}
+                          onValueChange={(value) => updateMaterial(index, "material_id", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select material" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {rawMaterials.map((rm) => (
+                              <SelectItem key={rm.id} value={rm.id}>
+                                {rm.name} ({rm.type})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(materialType === "gold" || materialType === "silver") && (
+                        <>
+                          <div>
+                            <Label>Grams</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.quantity}
+                              onChange={(e) => updateMaterial(index, "quantity", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Amount per Gram (₱)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.amountPerUnit}
+                              onChange={(e) => updateMaterial(index, "amountPerUnit", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Total</Label>
+                            <Input value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
+                          </div>
+                        </>
+                      )}
+
+                      {materialType === "diamond" && (
+                        <>
+                          <div>
+                            <Label>Pieces</Label>
+                            <Input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={mat.pieces || ""}
+                              onChange={(e) => updateMaterial(index, "pieces", e.target.value ? parseInt(e.target.value) : 0)}
+                              placeholder="Enter quantity"
+                            />
+                          </div>
+                          <div>
+                            <Label>Carat (per piece)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.carat || 0}
+                              onChange={(e) => updateMaterial(index, "carat", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Price per Carat (₱)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.amountPerUnit || 0}
+                              onChange={(e) => updateMaterial(index, "amountPerUnit", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Price per Piece (₱)</Label>
+                            <Input 
+                              value={`₱${calculatePricePerPiece(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                              disabled 
+                            />
+                          </div>
+                          <div>
+                            <Label>Total ({mat.pieces || 1} pcs)</Label>
+                            <Input 
+                              value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                              disabled 
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {materialType === "gem" && (
+                        <>
+                          <div>
+                            <Label>Pieces</Label>
+                            <Input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={mat.pieces || ""}
+                              onChange={(e) => updateMaterial(index, "pieces", e.target.value ? parseInt(e.target.value) : 0)}
+                              placeholder="Enter quantity"
+                            />
+                          </div>
+                          <div>
+                            <Label>Carat (per piece)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.carat || 0}
+                              onChange={(e) => updateMaterial(index, "carat", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Price per Carat (₱)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.amountPerUnit || 0}
+                              onChange={(e) => updateMaterial(index, "amountPerUnit", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Price per Piece (₱)</Label>
+                            <Input 
+                              value={`₱${calculatePricePerPiece(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                              disabled 
+                            />
+                          </div>
+                          <div>
+                            <Label>Total ({mat.pieces || 1} pcs)</Label>
+                            <Input 
+                              value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                              disabled 
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {materialType === "south_sea_pearl" && (
+                        <>
+                          <div>
+                            <Label>Pieces</Label>
+                            <Input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={mat.pieces || ""}
+                              onChange={(e) => updateMaterial(index, "pieces", e.target.value ? parseInt(e.target.value) : 0)}
+                              placeholder="Enter quantity"
+                            />
+                          </div>
+                          <div>
+                            <Label>Size (per piece)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.size || 0}
+                              onChange={(e) => updateMaterial(index, "size", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Cost per Piece (₱)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.costPerPiece || 0}
+                              onChange={(e) => updateMaterial(index, "costPerPiece", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Total Cost</Label>
+                            <Input 
+                              value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                              disabled 
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {materialType === "other" && (
+                        <>
+                          <div>
+                            <Label>Quantity</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.quantity || 0}
+                              onChange={(e) => updateMaterial(index, "quantity", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Cost per Unit (₱)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={mat.amountPerUnit}
+                              onChange={(e) => updateMaterial(index, "amountPerUnit", parseFloat(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>Total</Label>
+                            <Input value={`₱${calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => removeMaterial(index)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <Label className="text-lg font-semibold">Labor Costs</Label>
+              <Button type="button" size="sm" onClick={addLabor}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add Labor
+              </Button>
+            </div>
+            {labor.map((lab, index) => (
+              <div key={index} className="border p-4 rounded-lg space-y-3 mb-3">
+                <div className="flex justify-between items-start">
+                  <div className="grid grid-cols-2 gap-3 flex-1">
+                    <div>
+                      <Label>Type</Label>
+                      <Select
+                        value={lab.type}
+                        onValueChange={(value) => updateLabor(index, "type", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="diamond_setting">Diamond Setting</SelectItem>
+                          <SelectItem value="tubog">Tubog</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {lab.type === "diamond_setting" && (
+                      <>
+                        <div>
+                          <Label>Pieces</Label>
+                          <Input
+                            type="number"
+                            value={lab.pieces}
+                            onChange={(e) => updateLabor(index, "pieces", parseInt(e.target.value))}
+                          />
+                        </div>
+                        <div>
+                          <Label>Amount per Piece (₱)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={lab.amountPerPiece}
+                            onChange={(e) => updateLabor(index, "amountPerPiece", parseFloat(e.target.value))}
+                          />
+                        </div>
+                        <div>
+                          <Label>Staff Member</Label>
+                          <Input
+                            placeholder="Name of staff who performed service"
+                            value={lab.staffMember || ""}
+                            onChange={(e) => updateLabor(index, "staffMember", e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {lab.type === "tubog" && (
+                      <div>
+                        <Label>Fixed Cost (₱)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={lab.fixedCost}
+                          onChange={(e) => updateLabor(index, "fixedCost", parseFloat(e.target.value))}
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <Label>Total</Label>
+                      <Input value={`₱${calculateLaborCost(lab).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} disabled />
+                    </div>
+                  </div>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => removeLabor(index)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex justify-between text-lg font-bold">
+              <span>Total Cost:</span>
+              <span>₱{calculateTotalCost().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Processing..." : item ? "Update" : "Create"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
