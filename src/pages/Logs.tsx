@@ -49,15 +49,32 @@ export default function Logs() {
       'transactions': 'Sales',
       'transaction_items': 'Sales',
       'products': 'Inventory',
+      'finished_items': 'Inventory',
+      'raw_materials': 'Inventory',
+      'item_materials': 'Inventory',
+      'item_labor': 'Inventory',
       'customers': 'Customers',
       'customer_files': 'Customers',
       'payment_plans': 'Collections',
       'collections': 'Collections',
+      'bank_checks': 'Collections',
       'expenses': 'Expenses',
+      'expense_bank_checks': 'Expenses',
       'files': 'Files',
       'folders': 'Files'
     };
     return moduleMap[tableName] || tableName;
+  };
+
+  const getActionBadgeVariant = (action: string) => {
+    switch (action) {
+      case 'CREATE': return 'default';
+      case 'UPDATE': return 'secondary';
+      case 'DELETE': return 'destructive';
+      case 'SOFT_DELETE': return 'destructive';
+      case 'RESTORE': return 'default';
+      default: return 'outline';
+    }
   };
 
   const columns = [
@@ -74,12 +91,7 @@ export default function Logs() {
       key: 'action',
       label: 'Action',
       render: (value: string) => (
-        <Badge variant={
-          value === 'CREATE' ? 'default' :
-          value === 'UPDATE' ? 'secondary' :
-          value === 'DELETE' ? 'destructive' :
-          'outline'
-        }>
+        <Badge variant={getActionBadgeVariant(value) as any}>
           {value}
         </Badge>
       )
@@ -147,11 +159,7 @@ export default function Logs() {
                   >
                     <CardContent className="p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <Badge variant={
-                          log.action === 'CREATE' ? 'default' :
-                          log.action === 'UPDATE' ? 'secondary' :
-                          log.action === 'DELETE' ? 'destructive' : 'outline'
-                        } className="text-[10px]">
+                        <Badge variant={getActionBadgeVariant(log.action) as any} className="text-[10px]">
                           {log.action}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">{getModuleName(log.table_name)}</Badge>
@@ -186,12 +194,7 @@ export default function Logs() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-semibold text-muted-foreground">Action</p>
-                    <Badge className="mt-1 text-sm" variant={
-                      selectedLog.action === 'CREATE' ? 'default' :
-                      selectedLog.action === 'UPDATE' ? 'secondary' :
-                      selectedLog.action === 'DELETE' ? 'destructive' :
-                      'outline'
-                    }>
+                    <Badge className="mt-1 text-sm" variant={getActionBadgeVariant(selectedLog.action) as any}>
                       {selectedLog.action}
                     </Badge>
                   </div>

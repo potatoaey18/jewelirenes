@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ItemDetailsDialog } from "./ItemDetailsDialog";
 import { useConfirmation } from "@/hooks/useConfirmation";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface FinishedItemsTabProps {
   refreshTrigger: number;
@@ -51,12 +52,15 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
     if (!confirmed) return;
 
     try {
+      const deletedAt = new Date().toISOString();
       const { error } = await supabase
         .from("finished_items")
-        .update({ deleted_at: new Date().toISOString() })
+        .update({ deleted_at: deletedAt })
         .eq("id", item.id);
 
       if (error) throw error;
+
+      await createAuditLog("SOFT_DELETE", "finished_items", item.id, { deleted_at: null }, { deleted_at: deletedAt });
 
       toast.success("Item moved to bin");
       fetchItems();
