@@ -10,10 +10,11 @@ import { createAuditLog } from "@/lib/auditLog";
 
 interface DeletedItemsTabProps {
   refreshTrigger: number;
+  searchQuery?: string;
   onRestore: () => void;
 }
 
-export function DeletedItemsTab({ refreshTrigger, onRestore }: DeletedItemsTabProps) {
+export function DeletedItemsTab({ refreshTrigger, searchQuery = "", onRestore }: DeletedItemsTabProps) {
   const { confirm } = useConfirmation();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,22 +108,27 @@ export function DeletedItemsTab({ refreshTrigger, onRestore }: DeletedItemsTabPr
     }
   };
 
+  const filteredItems = items.filter(item =>
+    item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
   }
 
-  if (items.length === 0) {
+  if (filteredItems.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Trash2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>No deleted items</p>
+        <p>{searchQuery ? "No items match your search" : "No deleted items"}</p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map((item) => (
+      {filteredItems.map((item) => (
         <Card key={item.id} className="hover:shadow-lg transition-shadow opacity-75">
           <CardHeader>
             <div className="flex justify-between items-start">

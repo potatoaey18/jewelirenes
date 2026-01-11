@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { FolderPlus, Upload, Trash2, Folder, File, Download, Users, Building2, Search } from "lucide-react";
+import { FolderPlus, Upload, Trash2, Folder, File, Download, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,37 +57,6 @@ const Files = () => {
         .select(`
           *,
           customers(name),
-          files(*)
-        `);
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch unique vendors from expenses
-  const { data: vendors = [] } = useQuery({
-    queryKey: ['vendors-files'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('vendor')
-        .not('vendor', 'is', null);
-      if (error) throw error;
-      
-      // Get unique vendors
-      const uniqueVendors = [...new Set(data.map(e => e.vendor).filter(Boolean))];
-      return uniqueVendors.sort();
-    }
-  });
-
-  // Fetch vendor files
-  const { data: vendorFiles = [] } = useQuery({
-    queryKey: ['vendor-files-all'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendor_files')
-        .select(`
-          *,
           files(*)
         `);
       if (error) throw error;
@@ -262,15 +231,6 @@ const Files = () => {
     };
   });
 
-  // Group vendor files by vendor
-  const vendorFilesGrouped = vendors.map(vendor => {
-    const filesForVendor = vendorFiles.filter(vf => vf.vendor_name === vendor);
-    return {
-      name: vendor,
-      files: filesForVendor
-    };
-  });
-
   // Filtered data based on search
   const filteredFolders = useMemo(() => 
     folders.filter(f => f.name.toLowerCase().includes(search.toLowerCase())),
@@ -285,11 +245,6 @@ const Files = () => {
   const filteredCustomers = useMemo(() => 
     customerFilesGrouped.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
     [customerFilesGrouped, search]
-  );
-  
-  const filteredVendors = useMemo(() => 
-    vendorFilesGrouped.filter(v => v.name.toLowerCase().includes(search.toLowerCase())),
-    [vendorFilesGrouped, search]
   );
 
   return (
@@ -314,7 +269,7 @@ const Files = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="all" className="text-xs sm:text-sm gap-1">
               <Folder className="h-3 w-3 sm:h-4 sm:w-4" />
               All
@@ -322,10 +277,6 @@ const Files = () => {
             <TabsTrigger value="clients" className="text-xs sm:text-sm gap-1">
               <Users className="h-3 w-3 sm:h-4 sm:w-4" />
               Clients ({customers.length})
-            </TabsTrigger>
-            <TabsTrigger value="vendors" className="text-xs sm:text-sm gap-1">
-              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              Vendors ({vendors.length})
             </TabsTrigger>
           </TabsList>
 
@@ -546,35 +497,6 @@ const Files = () => {
             )}
           </TabsContent>
 
-          {/* Vendors Tab */}
-          <TabsContent value="vendors">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {filteredVendors.map((vendor) => (
-                <Card
-                  key={vendor.name}
-                  className="hover:shadow-lg transition-all"
-                >
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="h-10 w-10 sm:h-16 sm:w-16 bg-accent/10 rounded-full flex items-center justify-center mb-2">
-                        <Building2 className="h-5 w-5 sm:h-8 sm:w-8 text-accent" />
-                      </div>
-                      <p className="font-medium truncate w-full text-sm sm:text-base">{vendor.name}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        {vendor.files.length} file(s)
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {filteredVendors.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  {search ? "No vendors match your search." : "No vendors yet. Add expenses with vendors to see their file folders here."}
-                </div>
-              )}
-            </div>
-          </TabsContent>
         </Tabs>
       </main>
 

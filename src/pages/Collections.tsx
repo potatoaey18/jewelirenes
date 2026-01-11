@@ -692,28 +692,30 @@ export default function Collections() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="checks">
-            <Card className="p-6">
-              <div className="flex justify-end gap-2 mb-4">
-                <Button variant="outline" onClick={handleExportBankChecksPDF}>
+          <TabsContent value="checks" className="min-h-0">
+            <Card className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4">
+                <Button variant="outline" onClick={handleExportBankChecksPDF} size="sm">
                   <Download className="mr-2 h-4 w-4" />
                   Export PDF
                 </Button>
-                <Button onClick={() => setBankCheckDialogOpen(true)}>
+                <Button onClick={() => setBankCheckDialogOpen(true)} size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Bank Check
                 </Button>
               </div>
 
-              <BankCheckBookView
-                checks={bankChecks}
-                customers={customers}
-                showCustomerFilter={true}
-                onCheckClick={(check) => {
-                  setSelectedBankCheck(check);
-                  setBankCheckDetailOpen(true);
-                }}
-              />
+              <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+                <BankCheckBookView
+                  checks={bankChecks}
+                  customers={customers}
+                  showCustomerFilter={true}
+                  onCheckClick={(check) => {
+                    setSelectedBankCheck(check);
+                    setBankCheckDetailOpen(true);
+                  }}
+                />
+              </div>
             </Card>
           </TabsContent>
         </Tabs>

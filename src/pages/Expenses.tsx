@@ -282,13 +282,18 @@ export default function Expenses() {
   };
 
   const handleDeleteClick = async (expense: any) => {
+    // Close detail dialog first if open
     setDetailDialogOpen(false);
+    
     const confirmed = await confirm({
       actionType: 'delete',
       title: 'Delete Expense',
       description: `This action cannot be undone. Are you sure you want to delete this ${expense.category || 'expense'} record?`,
     });
+    
     if (!confirmed) return;
+    
+    // Execute the delete mutation and wait for it to complete
     deleteExpense.mutate(expense);
   };
 

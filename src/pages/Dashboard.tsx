@@ -8,6 +8,7 @@ import { TrendDialog } from "@/components/dashboard/TrendDialog";
 import { CashCheckSummaryDialog } from "@/components/dashboard/CashCheckSummaryDialog";
 import { CashOnlinePaymentDialog } from "@/components/dashboard/CashOnlinePaymentDialog";
 import { DashboardSettings } from "@/components/dashboard/DashboardSettings";
+import { RecentSaleDetailDialog } from "@/components/dashboard/RecentSaleDetailDialog";
 import { useNavigate } from "react-router-dom";
 import { format, startOfDay, startOfWeek, startOfMonth, subDays, subYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -64,6 +65,10 @@ const Dashboard = () => {
     totalAmount: number;
     onlineData?: { gcash: TransactionSummary[]; bdo: TransactionSummary[]; bpi: TransactionSummary[] };
   }>({ open: false, type: "cash", data: [], totalAmount: 0 });
+  const [saleDetailDialog, setSaleDetailDialog] = useState<{
+    open: boolean;
+    sale: any;
+  }>({ open: false, sale: null });
   const navigate = useNavigate();
 
   const handleViewModeChange = (mode: ViewMode) => {
@@ -764,7 +769,8 @@ const Dashboard = () => {
                   return (
                     <div
                       key={sale.id}
-                      className="flex items-center justify-between p-2 sm:p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors gap-2"
+                      className="flex items-center justify-between p-2 sm:p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors gap-2 cursor-pointer"
+                      onClick={() => setSaleDetailDialog({ open: true, sale })}
                     >
                       <p className="font-medium text-xs sm:text-sm truncate flex-1">{productName}</p>
                       <div className="text-right flex-shrink-0">
@@ -813,6 +819,12 @@ const Dashboard = () => {
             periodLabel={periodLabel}
           />
         )}
+
+        <RecentSaleDetailDialog
+          open={saleDetailDialog.open}
+          onOpenChange={(open) => setSaleDetailDialog({ ...saleDetailDialog, open })}
+          sale={saleDetailDialog.sale}
+        />
       </main>
     </div>
   );

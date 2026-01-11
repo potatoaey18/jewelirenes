@@ -11,10 +11,11 @@ import { createAuditLog } from "@/lib/auditLog";
 
 interface FinishedItemsTabProps {
   refreshTrigger: number;
+  searchQuery?: string;
   onEdit: (item: any) => void;
 }
 
-export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabProps) {
+export function FinishedItemsTab({ refreshTrigger, searchQuery = "", onEdit }: FinishedItemsTabProps) {
   const { confirm } = useConfirmation();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,12 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
     }
   };
 
+  const filteredItems = items.filter(item =>
+    item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
   }
@@ -107,7 +114,7 @@ export function FinishedItemsTab({ refreshTrigger, onEdit }: FinishedItemsTabPro
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <Card key={item.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex justify-between items-start">

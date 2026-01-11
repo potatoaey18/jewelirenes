@@ -904,14 +904,6 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             onChange={(e) => updateLabor(index, "amountPerPiece", parseFloat(e.target.value))}
                           />
                         </div>
-                        <div>
-                          <Label>Staff Member</Label>
-                          <Input
-                            placeholder="Name of staff who performed service"
-                            value={lab.staffMember || ""}
-                            onChange={(e) => updateLabor(index, "staffMember", e.target.value)}
-                          />
-                        </div>
                       </>
                     )}
 

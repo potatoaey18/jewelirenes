@@ -2,7 +2,8 @@ import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, Package, Layers, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Download, Package, Layers, Trash2, Search } from "lucide-react";
 import { FinishedItemsTab } from "@/components/inventory/FinishedItemsTab";
 import { RawMaterialsTab } from "@/components/inventory/RawMaterialsTab";
 import { DeletedItemsTab } from "@/components/inventory/DeletedItemsTab";
@@ -21,6 +22,7 @@ export default function Inventory() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [search, setSearch] = useState("");
 
   const handleAddItem = () => {
     setSelectedItem(null);
@@ -125,6 +127,15 @@ export default function Inventory() {
       <div className="container mx-auto p-4 md:p-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl md:text-4xl font-bold">Inventory Management</h1>
+          <div className="relative w-full sm:w-64 lg:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search items, materials..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 h-10"
+            />
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -229,6 +240,7 @@ export default function Inventory() {
           <TabsContent value="items" className="mt-6">
             <FinishedItemsTab 
               refreshTrigger={refreshTrigger}
+              searchQuery={search}
               onEdit={(item) => {
                 setSelectedItem(item);
                 setIsItemDialogOpen(true);
@@ -239,6 +251,7 @@ export default function Inventory() {
           <TabsContent value="materials" className="mt-6">
             <RawMaterialsTab 
               refreshTrigger={refreshTrigger}
+              searchQuery={search}
               onEdit={(material) => {
                 setSelectedMaterial(material);
                 setIsMaterialDialogOpen(true);
@@ -249,6 +262,7 @@ export default function Inventory() {
           <TabsContent value="bin" className="mt-6">
             <DeletedItemsTab 
               refreshTrigger={refreshTrigger}
+              searchQuery={search}
               onRestore={handleSuccess}
             />
           </TabsContent>
