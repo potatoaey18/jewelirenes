@@ -10,7 +10,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-
 type ActionType = "create" | "update" | "delete" | "restore" | "custom";
 
 interface ConfirmationConfig {
@@ -83,20 +82,32 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
   const handleConfirm = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Set loading state briefly for UX feedback if needed
+    setState((prev) => ({ ...prev, isLoading: true }));
+
+    // Resolve promise
     resolveRef.current?.(true);
-    setState({ isOpen: false, isLoading: false });
+
+    // Close modal but **preserve actionType** to avoid flashing custom
+    setState((prev) => ({ ...prev, isOpen: false, isLoading: false }));
   }, []);
 
   const handleCancel = useCallback(() => {
     resolveRef.current?.(false);
-    setState({ isOpen: false, isLoading: false });
+
+    // Close modal but preserve actionType
+    setState((prev) => ({ ...prev, isOpen: false, isLoading: false }));
   }, []);
 
-  const handleOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      handleCancel();
-    }
-  }, [handleCancel]);
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        handleCancel();
+      }
+    },
+    [handleCancel]
+  );
 
   const actionType = state.actionType || "custom";
   const defaults = defaultMessages[actionType];
@@ -109,14 +120,10 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{state.title || defaults.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {state.description || defaults.description}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{state.description || defaults.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={state.isLoading}>
-              {state.cancelLabel || "Cancel"}
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={state.isLoading}>{state.cancelLabel || "Cancel"}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
               className={isDestructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}

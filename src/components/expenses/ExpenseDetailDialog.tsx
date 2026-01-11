@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 
 interface Expense {
   id: string;
@@ -27,10 +27,11 @@ interface ExpenseDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?: (expense: Expense) => void;
+  // onDelete prop is kept for type compatibility but no longer used
   onDelete?: (expense: Expense) => void;
 }
 
-export function ExpenseDetailDialog({ expense, open, onOpenChange, onEdit, onDelete }: ExpenseDetailDialogProps) {
+export function ExpenseDetailDialog({ expense, open, onOpenChange, onEdit }: ExpenseDetailDialogProps) {
   if (!expense) return null;
 
   const isCheckPayment = expense.payment_method === 'Check';
@@ -161,28 +162,24 @@ export function ExpenseDetailDialog({ expense, open, onOpenChange, onEdit, onDel
           <div className="text-xs text-muted-foreground pt-2">
             Created: {new Date(expense.created_at).toLocaleString()}
           </div>
+
+          {/* Policy notice - very important for audit trail compliance */}
+          <div className="mt-4 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground italic">
+            Expenses cannot be deleted to maintain complete and accurate financial records. 
+            Please use the Edit function for corrections or contact an administrator for special cases.
+          </div>
         </div>
 
-        {(onEdit || onDelete) && (
-          <DialogFooter className="flex-row gap-2 sm:justify-between">
-            {onDelete && (
-              <Button
-                variant="destructive"
-                onClick={() => onDelete(expense)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            )}
-            {onEdit && (
-              <Button
-                variant="outline"
-                onClick={() => onEdit(expense)}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            )}
+        {/* Footer - only Edit button remains */}
+        {onEdit && (
+          <DialogFooter className="sm:justify-start">
+            <Button
+              variant="outline"
+              onClick={() => onEdit(expense)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Expense
+            </Button>
           </DialogFooter>
         )}
       </DialogContent>

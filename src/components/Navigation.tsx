@@ -9,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import logo from "./logo.png";
 
 const Navigation = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -83,7 +84,11 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Crown className="h-7 w-7 sm:h-8 sm:w-8 text-accent" />
+            <img
+              src={logo}
+              alt="Jewelirene's Logo"
+              className="h-7 sm:h-8 w-auto"
+            />
             <h1 className="text-xl sm:text-2xl font-bold">Jewelirene's</h1>
           </div>
           

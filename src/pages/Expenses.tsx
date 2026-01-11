@@ -36,16 +36,19 @@ export default function Expenses() {
   const { user } = useAuth();
   const { confirm } = useConfirmation();
   const queryClient = useQueryClient();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [checkDetailDialogOpen, setCheckDetailDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [selectedCheck, setSelectedCheck] = useState<any>(null);
+
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => 
     (localStorage.getItem("expenses-view") as ViewMode) || "table"
   );
+
   const [formData, setFormData] = useState({
     amount: '',
     expense_date: new Date().toISOString().split('T')[0],
@@ -77,7 +80,6 @@ export default function Expenses() {
     }
   });
 
-  // Fetch expense bank checks (for total calculation - checks added directly in Checks tab)
   const { data: expenseBankChecks = [] } = useQuery({
     queryKey: ['expense_bank_checks'],
     queryFn: async () => {
@@ -90,7 +92,6 @@ export default function Expenses() {
     }
   });
 
-  // Get unique vendors for suggestions
   const uniqueVendors = useMemo(() => {
     const vendors = new Set<string>();
     expenses.forEach(exp => {
@@ -124,7 +125,6 @@ export default function Expenses() {
       
       if (error) throw error;
 
-      // If payment method is Check, also create an expense_bank_check entry
       if (data.payment_method === CHECK_PAYMENT_METHOD && data.check_number) {
         const bankCheckData = {
           vendor: data.vendor,
@@ -197,6 +197,8 @@ export default function Expenses() {
     }
   });
 
+  // Keeping mutation for possible future admin/superuser functionality
+  // But it's NEVER called from normal UI anymore
   const deleteExpense = useMutation({
     mutationFn: async (expense: any) => {
       const { error } = await supabase
@@ -281,20 +283,16 @@ export default function Expenses() {
     setEditDialogOpen(true);
   };
 
+  // ────────────────────────────────────────────────────────────────
+  //  DELETION IS DISABLED - THIS FUNCTION IS KEPT FOR REFERENCE ONLY
+  // ────────────────────────────────────────────────────────────────
   const handleDeleteClick = async (expense: any) => {
-    // Close detail dialog first if open
-    setDetailDialogOpen(false);
-    
-    const confirmed = await confirm({
-      actionType: 'delete',
-      title: 'Delete Expense',
-      description: `This action cannot be undone. Are you sure you want to delete this ${expense.category || 'expense'} record?`,
-    });
-    
-    if (!confirmed) return;
-    
-    // Execute the delete mutation and wait for it to complete
-    deleteExpense.mutate(expense);
+    toast.info(
+      "Deletion of expenses is not allowed to maintain complete financial records. " +
+      "Please contact your administrator if this expense needs correction or reversal."
+    );
+    // You can optionally log this attempt:
+    // await createAuditLog('DELETE_ATTEMPT_BLOCKED', 'expenses', expense.id, expense, null);
   };
 
   const filteredExpenses = expenses.filter(expense =>
@@ -303,8 +301,6 @@ export default function Expenses() {
     expense.category?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Calculate total: expenses + standalone checks (checks not already in expenses via Check payment method)
-  // Get check numbers from expenses that were paid via Check
   const expenseCheckNumbers = useMemo(() => {
     return new Set(
       expenses
@@ -313,7 +309,6 @@ export default function Expenses() {
     );
   }, [expenses]);
 
-  // Get standalone checks (not already counted in expenses)
   const standaloneChecks = useMemo(() => {
     return expenseBankChecks
       .filter(check => !expenseCheckNumbers.has(check.check_number))
@@ -327,19 +322,16 @@ export default function Expenses() {
         payment_method: 'Check',
         notes: check.notes,
         isStandaloneCheck: true,
-        // Include original check data for detail view
         originalCheck: check
       }));
   }, [expenseBankChecks, expenseCheckNumbers]);
 
-  // Combined and filtered expenses (including standalone checks)
   const filteredStandaloneChecks = standaloneChecks.filter(check =>
     check.description?.toLowerCase().includes(search.toLowerCase()) ||
     check.vendor?.toLowerCase().includes(search.toLowerCase()) ||
     check.category?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Merge expenses and standalone checks for display
   const allExpensesWithChecks = useMemo(() => {
     return [...filteredExpenses, ...filteredStandaloneChecks].sort((a, b) => 
       new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
@@ -539,7 +531,6 @@ export default function Expenses() {
                       </Select>
                     </div>
                     
-                    {/* Card/Online Payment Transaction Fields */}
                     {showTransactionFields && (
                       <>
                         <div>
@@ -581,7 +572,6 @@ export default function Expenses() {
                       </>
                     )}
 
-                    {/* Check Payment Fields - matching Bank Check form */}
                     {isCheckPayment && (
                       <>
                         <div>
@@ -781,7 +771,7 @@ export default function Expenses() {
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
           onEdit={handleEditClick}
-          onDelete={handleDeleteClick}
+          onDelete={handleDeleteClick}  // Still passed, but now shows message only
         />
 
         <CheckDetailDialog
@@ -869,7 +859,6 @@ export default function Expenses() {
                   </Select>
                 </div>
                 
-                {/* Card/Online Payment Transaction Fields */}
                 {(['Credit Card', 'Debit Card'].includes(formData.payment_method) || ['GCash', 'BDO', 'BPI', 'Bank Transfer'].includes(formData.payment_method)) && (
                   <>
                     <div>
@@ -908,7 +897,6 @@ export default function Expenses() {
                   </>
                 )}
 
-                {/* Check Payment Fields */}
                 {formData.payment_method === 'Check' && (
                   <>
                     <div>

@@ -39,11 +39,7 @@ export function RecentSaleDetailDialog({ open, onOpenChange, sale }: RecentSaleD
                 <div key={idx} className="flex justify-between items-center bg-muted/50 px-3 py-2 rounded-md">
                   <div>
                     <p className="font-medium text-sm">{item.product_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.quantity} × {formatPeso(item.unit_price)}
-                    </p>
                   </div>
-                  <p className="font-semibold text-sm">{formatPeso(item.quantity * item.unit_price)}</p>
                 </div>
               ))}
             </div>
