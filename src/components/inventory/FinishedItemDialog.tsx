@@ -695,7 +695,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
               return (
                 <div key={index} className="border p-4 rounded-lg mb-3">
                   <div className="flex justify-between items-start gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-1 flex-1">
                       <div>
                         <Label>Material</Label>
                         <Popover open={materialOpens[index]} onOpenChange={(open) => {
@@ -881,7 +881,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
             {labor.map((lab, index) => (
               <div key={index} className="border p-4 rounded-lg mb-3">
                 <div className="flex justify-between items-start gap-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-1 flex-1">
                     <div>
                       <Label>Type</Label>
                       <Select

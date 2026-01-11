@@ -34,6 +34,8 @@ const DialogContent = React.forwardRef<
       className={cn(
         // Base styles + mobile-first approach
         "fixed z-50 grid w-full max-w-lg bg-background shadow-xl border rounded-2xl",
+        "p-4 sm:p-6 md:p-8",
+
 
         // Positioning & sizing
         "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
