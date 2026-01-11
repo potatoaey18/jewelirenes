@@ -95,9 +95,9 @@ export function BankCheckBookView({
       </div>
 
       {/* Bank Book Style View */}
-      <div className="border rounded-lg overflow-hidden bg-card">
+      <div className="border rounded-lg overflow-hidden bg-card max-h-[60vh] overflow-y-auto">
         {/* Header Row */}
-        <div className="bg-muted/50 px-4 py-3 border-b grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="bg-muted/50 px-4 py-3 border-b grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 z-10">
           <div className="col-span-2">Date</div>
           <div className="col-span-3">Bank / Branch</div>
           <div className="col-span-2">Check #</div>

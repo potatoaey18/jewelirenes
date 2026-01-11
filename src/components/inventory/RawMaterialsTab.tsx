@@ -10,10 +10,11 @@ import { useConfirmation } from "@/hooks/useConfirmation";
 
 interface RawMaterialsTabProps {
   refreshTrigger: number;
+  searchQuery?: string;
   onEdit: (material: any) => void;
 }
 
-export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps) {
+export function RawMaterialsTab({ refreshTrigger, searchQuery = "", onEdit }: RawMaterialsTabProps) {
   const { confirm } = useConfirmation();
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,12 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
     return labels[type] || type;
   };
 
+  const filteredMaterials = materials.filter(material =>
+    material.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    material.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    material.other_description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
   }
@@ -107,7 +114,7 @@ export function RawMaterialsTab({ refreshTrigger, onEdit }: RawMaterialsTabProps
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {materials.map((material) => (
+        {filteredMaterials.map((material) => (
           <Card key={material.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="text-lg">{material.name}</CardTitle>
