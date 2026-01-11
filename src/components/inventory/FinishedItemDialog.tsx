@@ -13,7 +13,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useConfirmation } from "@/hooks/useConfirmation";
-import { CurrencyInput } from "@/components/ui/currency-input"; // ← Add this import
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Material {
   material_id: string;
@@ -57,6 +57,8 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [itemTypeOpen, setItemTypeOpen] = useState(false);
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [materialOpens, setMaterialOpens] = useState<boolean[]>([]);
   const [customItemType, setCustomItemType] = useState("");
   const [formData, setFormData] = useState({
     sku: "",
@@ -76,6 +78,10 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   const handleNameChange = (value: string) => {
     setFormData({ ...formData, name: value, sku: value });
   };
+
+  useEffect(() => {
+    setMaterialOpens(new Array(materials.length).fill(false));
+  }, [materials.length]);
 
   useEffect(() => {
     if (open) {
@@ -144,29 +150,33 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   };
 
   const handleMaterialSelect = (index: number, materialId: string) => {
-  const material = rawMaterials.find(m => m.id === materialId);
-  if (!material) return;
+    const material = rawMaterials.find(m => m.id === materialId);
+    if (!material) return;
 
-  const updated = [...materials];
+    const materialType = material.type;
+    const isPieceBased = materialType === "diamond" || materialType === "gem" || materialType === "south_sea_pearl";
 
-  updated[index] = {
-    ...updated[index],
-    material_id: materialId,
+    const updated = [...materials];
+    updated[index] = {
+      ...updated[index],
+      material_id: materialId,
+      quantity: 0,
+      pieces: 0,
+      carat: 0,
+      size: 0,
+    };
 
-    // reset usage values
-    quantity: 0,
-    pieces: 0,
-    carat: 0,
-    size: 0,
+    if (materialType === "south_sea_pearl") {
+      updated[index].costPerPiece = material.cost_per_unit || 0;
+      updated[index].size = material.other_description ? parseFloat(material.other_description) : 0;
+    } else if (isPieceBased) {
+      updated[index].amountPerUnit = material.cost_per_unit || 0;
+    } else {
+      updated[index].amountPerUnit = material.cost_per_unit || 0;
+    }
 
-    // 🔑 auto-fill from inventory
-    amountPerUnit: material.cost_per_unit || 0,
+    setMaterials(updated);
   };
-
-  setMaterials(updated);
-};
-
-
 
   const fetchItemLabor = async (itemId: string) => {
     const { data, error } = await supabase
@@ -244,10 +254,10 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       return (mat.quantity || 0) * (mat.amountPerUnit || 0);
     } 
     if (material.type === "diamond" || material.type === "gem") {
-      return (mat.pieces || 1) * (mat.carat || 0) * (mat.amountPerUnit || 0);
+      return (mat.pieces || 0) * (mat.carat || 0) * (mat.amountPerUnit || 0);
     } 
     if (material.type === "south_sea_pearl") {
-      return (mat.pieces || 1) * (mat.costPerPiece || 0);
+      return (mat.pieces || 0) * (mat.costPerPiece || 0);
     }
     return 0;
   };
@@ -469,6 +479,10 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
     return rawMaterials.find(m => m.id === materialId)?.type;
   };
 
+  const getMaterialStock = (materialId: string) => {
+    return rawMaterials.find(m => m.id === materialId)?.quantity_on_hand || 0;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -476,7 +490,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
           <DialogTitle>{item ? "Edit" : "Add"} Finished Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Date Manufactured</Label>
               <Input
@@ -562,22 +576,64 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
             <div>
               <Label>Customer (Optional)</Label>
-              <Select
-                value={formData.customer_id || "none"}
-                onValueChange={(value) => setFormData({ ...formData, customer_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer (if custom)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No customer (stock item)</SelectItem>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={customerOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {formData.customer_id
+                      ? customers.find((c) => c.id === formData.customer_id)?.name
+                      : "Select customer (if custom)..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search customer..." />
+                    <CommandList>
+                      <CommandEmpty>No customer found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            setFormData({ ...formData, customer_id: "" });
+                            setCustomerOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !formData.customer_id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          No customer (stock item)
+                        </CommandItem>
+                        {customers.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={c.name}
+                            onSelect={() => {
+                              setFormData({ ...formData, customer_id: c.id });
+                              setCustomerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.customer_id === c.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {c.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>
@@ -631,29 +687,69 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
             {materials.map((mat, index) => {
               const type = getMaterialType(mat.material_id);
+              const stock = getMaterialStock(mat.material_id);
+              const isInsufficient = type === "gold" || type === "silver" || type === "other"
+                ? (mat.quantity || 0) > stock
+                : (mat.pieces || 0) > stock;
 
               return (
                 <div key={index} className="border p-4 rounded-lg mb-3">
                   <div className="flex justify-between items-start gap-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-1 flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 flex-1">
                       <div>
                         <Label>Material</Label>
-                        <Select
-                          value={mat.material_id}
-                          onValueChange={(v) => handleMaterialSelect(index, v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rawMaterials.map((rm) => (
-                              <SelectItem key={rm.id} value={rm.id}>
-                                {rm.name} ({rm.type})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
+                        <Popover open={materialOpens[index]} onOpenChange={(open) => {
+                          const newOpens = [...materialOpens];
+                          newOpens[index] = open;
+                          setMaterialOpens(newOpens);
+                        }}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={materialOpens[index]}
+                              className="w-full justify-between font-normal"
+                            >
+                              {mat.material_id
+                                ? rawMaterials.find((rm) => rm.id === mat.material_id)?.name
+                                : "Select material..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search material..." />
+                              <CommandList>
+                                <CommandEmpty>No material found.</CommandEmpty>
+                                <CommandGroup>
+                                  {rawMaterials.map((rm) => (
+                                    <CommandItem
+                                      key={rm.id}
+                                      value={rm.name}
+                                      className={cn(
+                                        rm.quantity_on_hand === 0 ? "text-red-500" : rm.quantity_on_hand <= 5 ? "text-yellow-500" : ""
+                                      )}
+                                      onSelect={() => {
+                                        handleMaterialSelect(index, rm.id);
+                                        const newOpens = [...materialOpens];
+                                        newOpens[index] = false;
+                                        setMaterialOpens(newOpens);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          mat.material_id === rm.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {rm.name} ({rm.type}) - Stock: {rm.quantity_on_hand}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
 
                       {(type === "gold" || type === "silver" || type === "other") && (
@@ -662,11 +758,18 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             <Label>Quantity {type === "other" ? "" : "(grams)"}</Label>
                             <Input
                               type="number"
-                              step="0.01"
+                              step="0.00001"
                               min="0"
-                              value={mat.quantity || ""}
-                              onChange={(e) => updateMaterial(index, "quantity", parseFloat(e.target.value) || 0)}
+                              inputMode="decimal"
+                              value={mat.quantity ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateMaterial(index, "quantity", val === "" ? "" : Number(val));
+                              }}
                             />
+                            {isInsufficient && (
+                              <p className="text-red-500 text-sm mt-1">Insufficient stock: only {stock} available</p>
+                            )}
                           </div>
                           <div>
                             <Label>Cost per Unit</Label>
@@ -689,17 +792,23 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                               value={mat.pieces || ""}
                               onChange={(e) => updateMaterial(index, "pieces", parseInt(e.target.value) || 0)}
                             />
+                            {isInsufficient && (
+                              <p className="text-red-500 text-sm mt-1">Insufficient stock: only {stock} available</p>
+                            )}
                           </div>
                           <div>
                             <Label>Carat per piece</Label>
                             <Input
-                                type="number"
-                                value={mat.carat ?? ""}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  updateMaterial(index, "carat", val === "" ? "" : Number(val));
-                                }}
-                              />
+                              type="number"
+                              step="0.00001"
+                              min="0"
+                              inputMode="decimal"
+                              value={mat.carat ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateMaterial(index, "carat", val === "" ? "" : Number(val));
+                              }}
+                            />
                           </div>
                           <div>
                             <Label>Price per Carat</Label>
@@ -722,6 +831,9 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                               value={mat.pieces || ""}
                               onChange={(e) => updateMaterial(index, "pieces", parseInt(e.target.value) || 0)}
                             />
+                            {isInsufficient && (
+                              <p className="text-red-500 text-sm mt-1">Insufficient stock: only {stock} available</p>
+                            )}
                           </div>
                           <div>
                             <Label>Cost per Piece</Label>
@@ -735,7 +847,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                       )}
 
                       {/* Total column - last in grid */}
-                      <div className="col-span-full md:col-span-1">
+                      <div className="col-span-1 md:col-span-1">
                         <Label>Total</Label>
                         <div className="h-10 flex items-center px-3 border rounded-md bg-muted/40">
                           ₱{calculateMaterialCost(mat).toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -769,7 +881,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
             {labor.map((lab, index) => (
               <div key={index} className="border p-4 rounded-lg mb-3">
                 <div className="flex justify-between items-start gap-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 flex-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-1">
                     <div>
                       <Label>Type</Label>
                       <Select
