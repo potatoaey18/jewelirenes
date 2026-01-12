@@ -51,6 +51,10 @@ const ITEM_TYPES = [
   "Other"
 ];
 
+// ── ROUNDING HELPER ─────────────────────────────
+const round = (value: number, decimals = 5) =>
+  Number(Number(value).toFixed(decimals));
+
 export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any) {
   const { confirm } = useConfirmation();
   const [loading, setLoading] = useState(false);
@@ -90,7 +94,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       if (item) {
         const existingItemType = item.item_type || "";
         const isCustomType = existingItemType && !ITEM_TYPES.includes(existingItemType);
-        
+
         setFormData({
           sku: item.sku || "",
           name: item.name || "",
@@ -129,20 +133,22 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       .from("item_materials")
       .select("*, raw_materials(*)")
       .eq("item_id", itemId);
-    
+
     if (!error && data) {
       const mappedMaterials: Material[] = data.map((im: any) => {
         const materialType = im.raw_materials?.type;
         const isPieceBased = materialType === "diamond" || materialType === "gem" || materialType === "south_sea_pearl";
-        
+
         return {
           material_id: im.material_id,
-          quantity: isPieceBased ? 0 : im.quantity_used,
-          pieces: isPieceBased ? im.quantity_used : 1,
-          carat: (materialType === "diamond" || materialType === "gem") ? (im.subtotal / ((im.quantity_used || 1) * (im.cost_at_time || 1))) : 0,
+          quantity: isPieceBased ? 0 : round(im.quantity_used, 5),
+          pieces: isPieceBased ? round(im.quantity_used, 5) : 1,
+          carat: (materialType === "diamond" || materialType === "gem")
+            ? round(im.subtotal / ((im.quantity_used || 1) * (im.cost_at_time || 1)), 5)
+            : 0,
           size: materialType === "south_sea_pearl" ? (im.raw_materials?.other_description ? parseFloat(im.raw_materials.other_description) : 0) : 0,
           amountPerUnit: im.cost_at_time,
-          costPerPiece: materialType === "south_sea_pearl" ? (im.subtotal / (im.quantity_used || 1)) : 0
+          costPerPiece: materialType === "south_sea_pearl" ? round(im.subtotal / (im.quantity_used || 1), 2) : 0
         };
       });
       setMaterials(mappedMaterials);
@@ -183,7 +189,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       .from("item_labor")
       .select("*")
       .eq("item_id", itemId);
-    
+
     if (!error && data) {
       const mappedLabor: Labor[] = data.map((il: any) => ({
         type: il.labor_type,
@@ -201,7 +207,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       .from("raw_materials")
       .select("*")
       .order("name");
-    
+
     if (!error && data) {
       setRawMaterials(data);
     }
@@ -212,7 +218,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
       .from("customers")
       .select("id, name")
       .order("name");
-    
+
     if (!error && data) {
       setCustomers(data);
     }
@@ -252,10 +258,10 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
 
     if (material.type === "gold" || material.type === "silver" || material.type === "other") {
       return (mat.quantity || 0) * (mat.amountPerUnit || 0);
-    } 
+    }
     if (material.type === "diamond" || material.type === "gem") {
       return (mat.pieces || 0) * (mat.carat || 0) * (mat.amountPerUnit || 0);
-    } 
+    }
     if (material.type === "south_sea_pearl") {
       return (mat.pieces || 0) * (mat.costPerPiece || 0);
     }
@@ -269,7 +275,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
   const calculateLaborCost = (lab: Labor) => {
     if (lab.type === "tubog") {
       return lab.fixedCost || 0;
-    } 
+    }
     if (lab.type === "diamond_setting") {
       return (lab.pieces || 0) * (lab.amountPerPiece || 0);
     }
@@ -688,9 +694,11 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
             {materials.map((mat, index) => {
               const type = getMaterialType(mat.material_id);
               const stock = getMaterialStock(mat.material_id);
+              const availableStock = stock + (item ? mat.quantity || 0 : 0); 
+
               const isInsufficient = type === "gold" || type === "silver" || type === "other"
-                ? (mat.quantity || 0) > stock
-                : (mat.pieces || 0) > stock;
+                ? (mat.quantity || 0) > availableStock
+                : (mat.pieces || 0) > availableStock;
 
               return (
                 <div key={index} className="border p-4 rounded-lg mb-3">
@@ -717,7 +725,7 @@ export function FinishedItemDialog({ open, onOpenChange, item, onSuccess }: any)
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-full p-0" align="start">
-                            <Command>
+                            <Command className="h-full overflow-y-auto">
                               <CommandInput placeholder="Search material..." />
                               <CommandList>
                                 <CommandEmpty>No material found.</CommandEmpty>
