@@ -125,6 +125,9 @@ export function FinishedItemsTab({ refreshTrigger, searchQuery = "", onEdit }: F
                     {new Date(item.date_manufactured).toLocaleDateString()}
                   </p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mt-1">{item.item_type}</p>
+                </div>
                 {item.image_url && (
                   <img
                     src={item.image_url}
